@@ -1,0 +1,11 @@
+# IDEs
+.vscode/
+.idea/
+
+# Logs e Cache
+*.log
+.DS_Store
+
+# Documentação de rascunhos pessoais
+temp/
+docs/rascunhos/
