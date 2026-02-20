@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Painel Administrativo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+    }
+
+    .login-box, .dashboard {
+      width: 350px;
+      margin: 100px auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2c3e50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #34495e;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .menu {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: #ecf0f1;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-box" id="loginBox">
+  <h2>Admin Login</h2>
+  <input type="text" id="matricula" placeholder="Matrícula">
+  <input type="password" id="senha" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+  <p id="erro" style="color:red;text-align:center;"></p>
+</div>
+
+<div class="dashboard hidden" id="dashboard">
+  <h2>Dashboard</h2>
+  <div id="boasVindas"></div>
+
+  <div class="menu">
+    <button onclick="listarFuncionarios()">Listar Funcionários</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div id="conteudo"></div>
+</div>
+
+<script>
+
+const API_URL = "COLE_AQUI_SEU_LINK_DO_EXEC";
+
+function login() {
+  const matricula = document.getElementById("matricula").value;
+  const senha = document.getElementById("senha").value;
+
+  fetch(`${API_URL}?action=adminlogin&matricula=${matricula}&senha=${senha}`)
+    .then(res => res.json())
+    .then(data => {
+
+      if (data.autorizado) {
+        localStorage.setItem("adminToken", data.token);
+        localStorage.setItem("adminNome", data.nome);
+        abrirDashboard();
+      } else {
+        document.getElementById("erro").innerText = "Login inválido";
+      }
+
+    });
+}
+
+function abrirDashboard() {
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+
+  const nome = localStorage.getItem("adminNome");
+  document.getElementById("boasVindas").innerHTML =
+    `<div class="card">Bem-vindo, <strong>${nome}</strong></div>`;
+}
+
+function listarFuncionarios() {
+  fetch(`${API_URL}?action=lista`)
+    .then(res => res.json())
+    .then(data => {
+      let html = "<div class='card'><strong>Funcionários:</strong><br><br>";
+      data.forEach(f => {
+        html += `${f.nome} - ${f.matricula}<br>`;
+      });
+      html += "</div>";
+
+      document.getElementById("conteudo").innerHTML = html;
+    });
+}
+
+function logout() {
+  localStorage.clear();
+  location.reload();
+}
+
+</script>
+
+</body>
+</html>
