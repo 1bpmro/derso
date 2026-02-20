@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>DERSO 1º BPM - Solicitação</title>
+   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1A3C6E">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DERSO">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+</head>
+<body>
+
+    <div class="container">
+        <div id="barraProgresso"></div>
+        
+        <header class="header">
+            <div class="logos">
+                <img src="https://rondonia.ro.gov.br/wp-content/uploads/2024/09/Brasao-PMRO-370x523.png" alt="Brasão PMRO">
+                <img src="https://museu.pm.ro.gov.br/wp-content/uploads/2024/05/1-bpm-3.png" alt="Logotipo 1º BPM">
+            </div>
+            <h2>DERSO 1º BPM</h2>
+            <div class="divisor"></div>
+            <p class="subtitle">Formulário de Solicitação de Diária Especial de Reforço do Serviço Operacional</p>
+        </header>
+
+        <div id="loadingScreen" class="loading-container">
+            <div class="spinner"></div>
+            <p id="loadingText">Sincronizando dados com o sistema...</p>
+        </div>
+
+        <div id="formContent" class="is-hidden">
+            
+            <section id="prazoBox">
+                <strong class="prazoTitulo">STATUS DO SISTEMA</strong>
+                <div id="timerDisplay">⌛ CALCULANDO PRAZO...</div>
+                
+                <div id="consultaFechada" class="is-hidden">
+                    <input type="text" id="matriculaConsulta" placeholder="Matrícula p/ consulta" inputmode="numeric">
+                    <button type="button" class="btn btn-outline" id="btnHistoryFechado">
+                        📂 VER MINHAS SOLICITAÇÕES
+                    </button>
+                </div>
+            </section>
+
+            <div id="instMessage"></div>
+
+            <form id="dersoForm">
+                <div class="form-group">
+                    <label for="email" class="required">E-mail Institucional ou Pessoal:</label>
+                    <input type="email" id="email" name="email" list="emailProviders" placeholder="exemplo@pm.ro.gov.br" required>
+                    <datalist id="emailProviders"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="matricula" class="required">Matrícula (apenas números):</label>
+                    <input type="text" id="matricula" name="matricula" inputmode="numeric" placeholder="Ex: 100012345" required>
+                    <span id="erroMatricula" class="is-hidden" style="color: #D32F2F; font-size: 11px; font-weight: bold;">
+                        ⚠️ MATRÍCULA NÃO LOCALIZADA
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label for="nome">Nome Completo:</label>
+                    <input type="text" id="nome" name="nome" readonly placeholder="Identificação automática">
+                </div>
+
+                <div class="form-group">
+                    <label class="required">Tipo de Folga:</label>
+                    <div class="radio-group" id="radioFolga">
+                        <input type="radio" id="f24" name="folga" value="24H" required><label for="f24">24H</label>
+                        <input type="radio" id="f48" name="folga" value="48H"><label for="f48">48H</label>
+                        <input type="radio" id="f72" name="folga" value="72H"><label for="f72">72H</label>
+                        <input type="radio" id="f96" name="folga" value="96H"><label for="f96">96H</label>
+                        <input type="radio" id="fLE" name="folga" value="FOLGA LE"><label for="fLE">LE</label>
+                        <input type="radio" id="f1" name="folga" value="1ª Folga"><label for="f1">1ª FOLGA</label>
+                        <input type="radio" id="f2" name="folga" value="2ª Folga"><label for="f2">2ª FOLGA</label>
+                        <input type="radio" id="fExp" name="folga" value="Expediente"><label for="fExp">EXP</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="data" class="required">Data da Folga:</label>
+                    <input type="date" id="data" name="data" required>
+                    <small id="infoPeriodo" style="display:block; margin-top:5px; color: #666;"></small>
+                </div>
+
+                <button type="button" class="btn btn-outline" id="btnHistory" style="margin-bottom:12px;">
+                    📂 VER MINHAS SOLICITAÇÕES
+                </button>
+                
+                <button type="submit" class="btn btn-primary" id="btnEnviar">
+                    ENVIAR SOLICITAÇÃO
+                </button>
+            </form>
+        </div>
+
+        <footer class="footer" id="footerText"></footer>
+    </div>
+
+    <div id="modalMsg" class="modal is-hidden">
+        <div class="modal-content">
+            <div id="modalIcon" style="font-size: 50px;"></div>
+            <h3 id="modalTitle"></h3>
+            <p id="modalText"></p>
+            <div id="historyContent" class="is-hidden" style="text-align: left; margin: 15px 0; max-height: 200px; overflow-y: auto;"></div> 
+            <button class="btn btn-primary" id="btnCloseModal">FECHAR</button>
+        </div>
+    </div>
+
+    <!-- MODAL ADMIN -->
+    <div id="adminLoginModal" class="modal is-hidden">
+        <div class="modal-content">
+            <div style="font-size: 50px;">🔐</div>
+            <h3 style="margin-bottom: 10px;">ACESSO ADMINISTRATIVO</h3>
+            <p style="color: var(--texto-secundario); margin-bottom: 20px;">
+                Digite sua matrícula para acessar o painel.
+            </p>
+
+            <div class="form-group">
+                <input type="text" id="adminMatricula" placeholder="Matrícula" inputmode="numeric">
+            </div>
+
+            <button class="btn btn-primary" id="btnAdminLogin">
+                ENTRAR
+            </button>
+        </div>
+    </div>
+
+    
+    <script type="module" src="main.js"></script>
+
+    <script>
+  if ('serviceWorker' in navigator) {
+    // O ponto antes da barra (./) é essencial para subpastas
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log("PWA: DERSO operacional no escopo:", reg.scope))
+      .catch(err => console.error("PWA: Erro no registro", err));
+  }
+</script>
+    
+</body>
+</html>
