@@ -13,6 +13,31 @@ import { configurarAcessoAdmin } from "./features/adminAccess.js";
 
 window.__ADMIN_MODE__ = false;
 
+async function pedirPermissaoNotificacao() {
+    if (!('Notification' in window)) {
+        console.log('Este navegador não suporta notificações.');
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        console.log('🔔 Permissão já concedida');
+        return;
+    }
+
+    if (Notification.permission === 'denied') {
+        console.log('❌ Permissão já foi negada');
+        return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission === 'granted') {
+        console.log('🔔 Permissão concedida com sucesso');
+    } else {
+        console.log('❌ Usuário negou a permissão');
+    }
+}
+
 /**
  * PONTO DE ENTRADA ÚNICO (Bootstrap)
  */
@@ -63,6 +88,10 @@ async function bootstrap() {
         // 8. Finalização
         UI.loading.hide();
         registrarLog("SISTEMA", "Sistema pronto para operações.", "SUCESSO");
+
+        setTimeout(() => {
+    pedirPermissaoNotificacao();
+}, 3000);
 
     } catch (error) {
         registrarLog("FALHA_CRITICA", error.message, "ERRO");
