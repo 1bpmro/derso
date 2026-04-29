@@ -89,9 +89,11 @@ async function bootstrap() {
         UI.loading.hide();
         registrarLog("SISTEMA", "Sistema pronto para operações.", "SUCESSO");
 
-        setTimeout(() => {
-    pedirPermissaoNotificacao();
-}, 3000);
+        if (Notification.permission === 'default') {
+    setTimeout(() => {
+        pedirPermissaoNotificacao();
+    }, 3000);
+}
 
     } catch (error) {
         registrarLog("FALHA_CRITICA", error.message, "ERRO");
