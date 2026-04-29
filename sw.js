@@ -75,15 +75,16 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json();
   } catch (e) {
-    data = {
-      title: 'DERSO',
-      body: 'Você tem uma pendência.'
-    };
+    data = {};
   }
 
+  const type = data.type || 'default';
+
   const title = data.title || 'DERSO';
+  const body = data.body || 'Notificação do sistema';
+
   const options = {
-    body: data.body || 'Você ainda não preencheu o mês atual.',
+    body,
     icon: '/assets/icon-192.png',
     badge: '/assets/icon-192.png',
     data: {
@@ -91,16 +92,16 @@ self.addEventListener('push', (event) => {
     }
   };
 
-event.waitUntil(
-  (async () => {
-    await self.registration.showNotification(title, options);
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, options);
 
-    // 🔴 ativa badge real
-    if ('setAppBadge' in self.navigator) {
-      await self.navigator.setAppBadge(1);
-    }
-  })()
-);
+      // 🔴 Só ativa badge para cobrança
+      if (type === 'pendente' && 'setAppBadge' in self.navigator) {
+        await self.navigator.setAppBadge(1);
+      }
+    })()
+  );
 });
 
 // 5. Clique na notificação
