@@ -10,6 +10,7 @@ import { setupEvents } from "./handlers/events.js";
 import { updateFooter } from "./services/footer.js";
 import { restaurarRascunho } from "./services/storage.js";
 import { configurarAcessoAdmin } from "./features/adminAccess.js";
+import { registrarDispositivo } from "./services/firebase.js";
 
 window.__ADMIN_MODE__ = false;
 
