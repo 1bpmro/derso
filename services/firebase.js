@@ -99,16 +99,15 @@ export async function registrarDispositivo(matricula) {
     registrarLog("PUSH", "Token gerado com sucesso", "SUCESSO");
 
     // 🔄 envia pro GAS
-    const resp = await fetch(`${GAS_URL}?action=salvar_token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        matricula,
-        token
-      })
-    });
+    const formData = new URLSearchParams();
+formData.append("action", "salvar_token");
+formData.append("matricula", matricula);
+formData.append("token", token);
+
+const resp = await fetch(GAS_URL, {
+  method: "POST",
+  body: formData
+});
 
     const result = await resp.json().catch(() => ({}));
 
