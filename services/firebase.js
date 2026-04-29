@@ -68,9 +68,12 @@ export async function registrarDispositivo(matricula) {
     const permitido = await solicitarPermissaoNotificacao();
     if (!permitido) return;
 
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY
-    });
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+const token = await getToken(messaging, {
+  vapidKey: VAPID_KEY,
+  serviceWorkerRegistration: registration
+});
 
     if (!token) {
       registrarLog("PUSH", "Token não gerado", "ERRO");
@@ -81,12 +84,15 @@ export async function registrarDispositivo(matricula) {
 
     // 🔄 envia pro GAS
     await fetch(`${GAS_URL}?action=salvar_token`, {
-      method: "POST",
-      body: JSON.stringify({
-        matricula,
-        token
-      })
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    matricula,
+    token
+  })
+});
 
     registrarLog("PUSH", "Dispositivo registrado no servidor", "SUCESSO");
 
