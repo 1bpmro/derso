@@ -65,6 +65,7 @@ event.respondWith(
     });
   })
 );
+  });
 
 
 // 4. Receber PUSH e exibir notificação
