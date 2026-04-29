@@ -10,6 +10,7 @@ import { handleSubmit } from "./submit.js";
 import { buscarHistorico } from "../core/api.js";
 import { UI } from "../ui/manager.js";
 import { applyInstitutionalTheme } from "../services/theme.js";
+import { registrarDispositivo } from "../services/firebase.js";
 
 export function setupEvents() {
     if (window.__ADMIN_MODE__) return;
@@ -64,14 +65,12 @@ export function setupEvents() {
     });
 
     /* ======================================
-        MATRÍCULA - VALIDAÇÃO E TEMA
+        MATRÍCULA - VALIDAÇÃO + PUSH + TEMA
     ====================================== */
-    
     DOM.matricula?.addEventListener("blur", () => {
-        let val = DOM.matricula.value.trim().replace(/\D/g, ''); // Limpeza de caracteres
+        let val = DOM.matricula.value.trim().replace(/\D/g, '');
         if (!val) return;
 
-        // Espelhando a lógica do seu Código.gs: normalizeMatricula
         if (!val.startsWith("1000")) {
             val = "1000" + val;
         }
@@ -79,19 +78,29 @@ export function setupEvents() {
         DOM.matricula.value = val;
         const erroEl = document.getElementById("erroMatricula");
 
-        // No seu Código.gs, a lista é: lista[matricula] = { nome: ..., niver: ... }
         const militar = STATE.employeeList[val];
 
         if (militar && militar.nome) {
             DOM.nome.value = militar.nome;
+
+            // 🚀 REGISTRO INTELIGENTE DO PUSH (por matrícula)
+            const registrado = localStorage.getItem("push_registrado");
+
+            if (registrado !== val) {
+                registrarDispositivo(val);
+                localStorage.setItem("push_registrado", val);
+            }
+
             if (erroEl) erroEl.style.display = "none";
             registrarLog("VALIDACAO", `Militar: ${militar.nome}`, "SUCESSO");
             applyInstitutionalTheme(val);
+
         } else {
             DOM.nome.value = "";
             if (erroEl) erroEl.style.display = "block";
             applyInstitutionalTheme();
         }
+
         updateProgress();
     });
 
@@ -120,22 +129,20 @@ export function setupEvents() {
 async function abrirPortaAdmin() {
     const login = prompt("🛡️ SISTEMA DERSO - ACESSO RESTRITO\nIdentifique-se:");
     if (!login) return;
+
     const senha = prompt("Digite sua senha de acesso:");
     if (!senha) return;
 
     UI.loading.show("Autenticando...");
 
     try {
-        // Faz o login REAL no servidor para pegar o Token UUID
         const resp = await fetch(`${CONFIG.API_URL}?action=adminlogin&matricula=${login}&senha=${senha}`);
         const result = await resp.json();
 
         if (result.autorizado) {
-            // ✅ SALVA O TOKEN OFICIAL QUE O GOOGLE GEROU
             localStorage.setItem("derso_session_token", result.token);
-            
             registrarLog("ADMIN", `Acesso autorizado: ${result.nome}`, "SUCESSO");
-            
+
             const { iniciarPainelAdmin } = await import("../features/admin.js");
             await iniciarPainelAdmin();
         } else {
@@ -148,6 +155,7 @@ async function abrirPortaAdmin() {
         UI.loading.hide();
     }
 }
+
 /* ======================================
     FUNÇÃO AUXILIAR - HISTÓRICO
 ====================================== */
@@ -166,15 +174,20 @@ async function carregarHistorico(matriculaOriginal) {
     let nomeMilitar = "MILITAR NÃO IDENTIFICADO";
 
     if (dadosMilitar) {
-        nomeMilitar = typeof dadosMilitar === "object" ? (dadosMilitar.nome || dadosMilitar.NOME) : dadosMilitar;
+        nomeMilitar = typeof dadosMilitar === "object"
+            ? (dadosMilitar.nome || dadosMilitar.NOME)
+            : dadosMilitar;
     } else if (DOM.nome && DOM.nome.value) {
         nomeMilitar = DOM.nome.value;
     }
 
     try {
         UI.loading.show("Buscando registros...");
+
         const resultado = await buscarHistorico(matricula);
-        const listaFinal = Array.isArray(resultado) ? resultado : (resultado?.dados || []);
+        const listaFinal = Array.isArray(resultado)
+            ? resultado
+            : (resultado?.dados || []);
 
         const conteudoHTML = `
             <div style="text-align: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
@@ -183,14 +196,17 @@ async function carregarHistorico(matriculaOriginal) {
                 </span>
             </div>
             <div style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
-                ${listaFinal.length > 0 
-                    ? listaFinal.map(item => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding: 10px 5px; font-size: 0.95rem;">
-                            <span>📅 <b>${item.data}</b></span>
-                            <span style="color: #1a3c6e; font-weight: bold;">${item.tipo || item.folga || "48H"}</span>
-                        </div>
-                    `).join("")
-                    : `<p style="text-align:center; padding: 20px; color: #666;">Nenhum registro encontrado.</p>`
+                ${
+                    listaFinal.length > 0
+                        ? listaFinal.map(item => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding: 10px 5px; font-size: 0.95rem;">
+                                <span>📅 <b>${item.data}</b></span>
+                                <span style="color: #1a3c6e; font-weight: bold;">
+                                    ${item.tipo || item.folga || "48H"}
+                                </span>
+                            </div>
+                        `).join("")
+                        : `<p style="text-align:center; padding: 20px; color: #666;">Nenhum registro encontrado.</p>`
                 }
             </div>
         `;
