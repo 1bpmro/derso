@@ -1,4 +1,4 @@
-// main.js
+// main.js - DERSO v7 (Com Score e Pressão Institucional)
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
 import { DOM } from "./core/dom.js";
@@ -16,13 +16,31 @@ window.__ADMIN_MODE__ = false;
 
 /**
  * LIMPEZA DE NOTIFICAÇÕES E BADGES
- * Executa assim que o app abre para remover o alerta visual (bolinha vermelha)
  */
 function limparAlertasVisuais() {
     if ('clearAppBadge' in navigator) {
         navigator.clearAppBadge().catch((err) => {
             console.error('Erro ao limpar Badge:', err);
         });
+    }
+}
+
+/**
+ * PRESSÃO PSICOLÓGICA: Verifica se o app está instalado (PWA Standalone)
+ */
+function verificarInstalacao() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (!isStandalone) {
+        setTimeout(() => {
+            UI.modal.show(
+                "INSTALAÇÃO RECOMENDADA",
+                "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos e acompanhar seu Score.",
+                isIOS ? "⎋" : "📲", 
+                "#1a3c6e"
+            );
+        }, 5000); // 5 segundos após o carregamento
     }
 }
 
@@ -33,23 +51,19 @@ async function pedirPermissaoNotificacao() {
     }
 
     if (Notification.permission === 'granted') {
-        // Se já tem permissão, garante que o token está atualizado no servidor
         registrarDispositivo();
         return;
     }
 
     if (Notification.permission === 'denied') {
-        console.log('❌ Permissão de notificação foi negada pelo usuário.');
+        console.log('❌ Permissão negada.');
         return;
     }
 
     const permission = await Notification.requestPermission();
-
     if (permission === 'granted') {
-        console.log('🔔 Permissão concedida com sucesso');
-        registrarDispositivo(); // Registra o token Firebase após a permissão
-    } else {
-        console.log('❌ Usuário negou a permissão');
+        console.log('🔔 Permissão concedida');
+        registrarDispositivo();
     }
 }
 
@@ -57,10 +71,10 @@ async function pedirPermissaoNotificacao() {
  * PONTO DE ENTRADA ÚNICO (Bootstrap)
  */
 async function bootstrap() {
-    // 0. Limpa badges de notificações anteriores (Xeque-mate no esquecimento)
+    // 0. Limpa badges e alertas ao abrir
     limparAlertasVisuais();
 
-    registrarLog("SISTEMA", "Iniciando motor DERSO v6...", "INFO");
+    registrarLog("SISTEMA", "Iniciando motor DERSO v7...", "INFO");
 
     if (!DOM.loading || !DOM.formContent) {
         console.error("Falha Crítica: Elementos essenciais não encontrados.");
@@ -72,8 +86,8 @@ async function bootstrap() {
         UI.loading.show("Sincronizando com o servidor...");
         applyDarkModeStyles();
 
-        // 2. Busca de Dados Unificada (Conecta com doGet action=get_initial_data)
-        registrarLog("SISTEMA", "Buscando dados institucionais...");
+        // 2. Busca de Dados Unificada (Inclui Score agora)
+        registrarLog("SISTEMA", "Buscando dados institucionais e Score...");
         
         const response = await fetch(`${CONFIG.API_URL}?action=get_initial_data`);
         if (!response.ok) throw new Error("Erro ao conectar com o servidor Google.");
@@ -82,9 +96,10 @@ async function bootstrap() {
 
         // 3. População do Estado (STATE)
         STATE.employeeList = result.lista || {}; 
+        STATE.userScore = result.score || 0; // Armazena o Score vindo do servidor
         const dData = result.datas;
 
-        registrarLog("SISTEMA", "Dados e Efetivo carregados.", "SUCESSO");
+        registrarLog("SISTEMA", `Dados carregados. Seu Score: ${STATE.userScore}`, "SUCESSO");
 
         // 4. Ativação de Serviços: Monitora prazos
         if (dData?.abertura && dData?.fechamento) {
@@ -94,26 +109,25 @@ async function bootstrap() {
         // 5. Configuração da Interface
         applyInstitutionalTheme();
         updateFooter();
-        setupEvents(); // Ativa os listeners de blur e submit
+        setupEvents(); // Ativa os listeners
 
-        // 6. Segurança
+        // 6. Segurança e Rascunho
         configurarAcessoAdmin();
-
-        // 7. Verificação de Rascunho
         restaurarRascunho();
 
-        // 8. Finalização
+        // 7. Finalização do Loading
         UI.loading.hide();
-        registrarLog("SISTEMA", "Sistema pronto para operações.", "SUCESSO");
+        registrarLog("SISTEMA", "Operacional.", "SUCESSO");
 
-        // 9. Gestão de Notificações Push
-        // Se a permissão for 'default', aguarda 3s para não assustar o usuário
+        // 8. Verificação de PWA (Standalone)
+        verificarInstalacao();
+
+        // 9. Gestão de Notificações
         if (Notification.permission === 'default') {
             setTimeout(() => {
                 pedirPermissaoNotificacao();
             }, 3000);
         } else if (Notification.permission === 'granted') {
-            // Se já concedeu, garante que o token Firebase está vinculado
             registrarDispositivo();
         }
 
@@ -123,7 +137,7 @@ async function bootstrap() {
         
         UI.modal.show(
             "ERRO DE CONEXÃO",
-            "Não foi possível conectar ao banco de dados. Verifique sua internet.",
+            "Não foi possível conectar ao banco de dados.",
             "📡",
             "red"
         );
