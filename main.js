@@ -14,6 +14,18 @@ import { registrarDispositivo } from "./services/firebase.js";
 
 window.__ADMIN_MODE__ = false;
 
+/**
+ * LIMPEZA DE NOTIFICAÇÕES E BADGES
+ * Executa assim que o app abre para remover o alerta visual (bolinha vermelha)
+ */
+function limparAlertasVisuais() {
+    if ('clearAppBadge' in navigator) {
+        navigator.clearAppBadge().catch((err) => {
+            console.error('Erro ao limpar Badge:', err);
+        });
+    }
+}
+
 async function pedirPermissaoNotificacao() {
     if (!('Notification' in window)) {
         console.log('Este navegador não suporta notificações.');
@@ -21,12 +33,13 @@ async function pedirPermissaoNotificacao() {
     }
 
     if (Notification.permission === 'granted') {
-        console.log('🔔 Permissão já concedida');
+        // Se já tem permissão, garante que o token está atualizado no servidor
+        registrarDispositivo();
         return;
     }
 
     if (Notification.permission === 'denied') {
-        console.log('❌ Permissão já foi negada');
+        console.log('❌ Permissão de notificação foi negada pelo usuário.');
         return;
     }
 
@@ -34,6 +47,7 @@ async function pedirPermissaoNotificacao() {
 
     if (permission === 'granted') {
         console.log('🔔 Permissão concedida com sucesso');
+        registrarDispositivo(); // Registra o token Firebase após a permissão
     } else {
         console.log('❌ Usuário negou a permissão');
     }
@@ -43,7 +57,10 @@ async function pedirPermissaoNotificacao() {
  * PONTO DE ENTRADA ÚNICO (Bootstrap)
  */
 async function bootstrap() {
-    registrarLog("SISTEMA", "Iniciando motor DERSO v5...", "INFO");
+    // 0. Limpa badges de notificações anteriores (Xeque-mate no esquecimento)
+    limparAlertasVisuais();
+
+    registrarLog("SISTEMA", "Iniciando motor DERSO v6...", "INFO");
 
     if (!DOM.loading || !DOM.formContent) {
         console.error("Falha Crítica: Elementos essenciais não encontrados.");
@@ -63,8 +80,7 @@ async function bootstrap() {
         
         const result = await response.json();
 
-        // 3. População do Estado (STATE) - Limpo e Direto
-        // O seu Código.gs retorna 'datas' e 'lista'
+        // 3. População do Estado (STATE)
         STATE.employeeList = result.lista || {}; 
         const dData = result.datas;
 
@@ -90,11 +106,16 @@ async function bootstrap() {
         UI.loading.hide();
         registrarLog("SISTEMA", "Sistema pronto para operações.", "SUCESSO");
 
+        // 9. Gestão de Notificações Push
+        // Se a permissão for 'default', aguarda 3s para não assustar o usuário
         if (Notification.permission === 'default') {
-    setTimeout(() => {
-        pedirPermissaoNotificacao();
-    }, 3000);
-}
+            setTimeout(() => {
+                pedirPermissaoNotificacao();
+            }, 3000);
+        } else if (Notification.permission === 'granted') {
+            // Se já concedeu, garante que o token Firebase está vinculado
+            registrarDispositivo();
+        }
 
     } catch (error) {
         registrarLog("FALHA_CRITICA", error.message, "ERRO");
