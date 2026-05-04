@@ -1,4 +1,5 @@
 import { iniciarPainelAdmin } from "./admin.js";
+import { CONFIG } from "../core/config.js"; // 🔥 FALTAVA ISSO
 
 let contadorCliques = 0;
 let temporizador = null;
@@ -21,38 +22,42 @@ export function configurarAcessoAdmin() {
         }
     });
 
-    // Evento do botão ENTRAR
     const btnLogin = document.getElementById("btnAdminLogin");
     btnLogin?.addEventListener("click", validarAcessoAdmin);
 }
 
 function abrirModalAdmin() {
-    const modal = document.getElementById("adminLoginModal");
-    modal?.classList.remove("is-hidden");
+    document.getElementById("adminLoginModal")?.classList.remove("is-hidden");
 }
 
 function fecharModalAdmin() {
-    const modal = document.getElementById("adminLoginModal");
-    modal?.classList.add("is-hidden");
+    document.getElementById("adminLoginModal")?.classList.add("is-hidden");
 }
 
 async function validarAcessoAdmin() {
     const input = document.getElementById("adminMatricula");
     const matricula = input?.value.trim();
 
+    if (!matricula) {
+        alert("Digite a matrícula");
+        return;
+    }
+
     const senha = prompt("Digite a senha administrativa:");
 
     try {
-
         const resp = await fetch(
             `${CONFIG.API_URL}?action=adminlogin&matricula=${matricula}&senha=${senha}`
         );
 
         const dados = await resp.json();
 
-        if (dados.autorizado) {
+        console.log("🔐 LOGIN:", dados);
 
-            localStorage.setItem("adminToken", dados.token);
+        if (dados.autorizado && dados.token) {
+
+            // 🔥 PADRONIZA O TOKEN
+            localStorage.setItem("derso_session_token", dados.token);
 
             fecharModalAdmin();
             iniciarPainelAdmin();
@@ -63,6 +68,7 @@ async function validarAcessoAdmin() {
         }
 
     } catch (err) {
+        console.error(err);
         alert("Erro ao conectar ao servidor.");
     }
 }
