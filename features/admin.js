@@ -80,7 +80,7 @@ export async function iniciarPainelAdmin() {
 }
 
 /* ======================================
-   🔥 CARREGA DADOS + EVENTOS (SCORE)
+   🔥 CARREGA DADOS + EVENTOS
 ====================================== */
 async function carregarDadosGlobais() {
     try {
@@ -110,7 +110,7 @@ async function carregarDadosGlobais() {
 }
 
 /* ======================================
-   🧠 SCORE COMPORTAMENTAL
+   🧠 SCORE
 ====================================== */
 function calcularScore() {
     const eventos = STATE.eventosPush || [];
@@ -132,6 +132,21 @@ function calcularScore() {
 }
 
 /* ======================================
+   🏷️ BADGE
+====================================== */
+function getBadge(score) {
+    if (score >= 3) {
+        return `<span style="background:#2E7D32;color:white;padding:4px 8px;border-radius:8px;font-size:11px;">🟢 CONFIÁVEL</span>`;
+    }
+
+    if (score >= 0) {
+        return `<span style="background:#FFD700;color:black;padding:4px 8px;border-radius:8px;font-size:11px;">🟡 NEUTRO</span>`;
+    }
+
+    return `<span style="background:#C62828;color:white;padding:4px 8px;border-radius:8px;font-size:11px;">🔴 CRÍTICO</span>`;
+}
+
+/* ======================================
    📊 RENDER
 ====================================== */
 function renderizarTudo(lista) {
@@ -146,6 +161,7 @@ function renderizarTudo(lista) {
 
     tbody.innerHTML = lista.map(item => {
         const score = STATE.scoreMap[item.matricula] || 0;
+        const badge = getBadge(score);
 
         return `
         <tr>
@@ -155,8 +171,8 @@ function renderizarTudo(lista) {
             </td>
             <td style="font-size:11px; font-weight:bold;">${item.data}</td>
             <td><span class="tag-folga">${item.folga}</span></td>
-            <td style="font-weight:bold; color:${score >= 0 ? '#2E7D32' : '#C62828'}">
-                ${score}
+            <td style="font-weight:bold;">
+                ${score}<br>${badge}
             </td>
         </tr>
         `;
