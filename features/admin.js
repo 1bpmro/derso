@@ -7,7 +7,6 @@ import { registrarLog } from "../services/logger.js";
 export async function iniciarPainelAdmin() {
     window.__ADMIN_MODE__ = true;
     
-    // Carregar biblioteca de gráficos dinamicamente
     if (!window.Chart) {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
@@ -19,8 +18,8 @@ export async function iniciarPainelAdmin() {
         <div class="admin-wrapper">
             <div class="admin-header">
                 <div>
-                    <h3 style="margin:0; color:var(--azul-marinho);">📊 DASHBOARD ESTRATÉGICO</h3>
-                    <small>1º BPM - Gestão de Efetivo</small>
+                    <h3 style="margin:0; color:var(--azul-marinho);">📊 DASHBOARD INTELIGENTE</h3>
+                    <small>Comportamento do Efetivo</small>
                 </div>
                 <button id="btnAdminExit" class="btn-exit">SAIR</button>
             </div>
@@ -36,7 +35,7 @@ export async function iniciarPainelAdmin() {
                 </div>
             </div>
 
-            <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px; box-shadow: var(--sombra-suave);">
+            <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
                 <canvas id="chartFolgas" height="150"></canvas>
             </div>
 
@@ -61,10 +60,11 @@ export async function iniciarPainelAdmin() {
                             <th>MILITAR</th>
                             <th>DATA</th>
                             <th>TIPO</th>
+                            <th>SCORE</th>
                         </tr>
                     </thead>
                     <tbody id="adminTableBody">
-                        <tr><td colspan="3" style="text-align:center; padding:20px;">Sincronizando...</td></tr>
+                        <tr><td colspan="4" style="text-align:center; padding:20px;">Sincronizando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -79,15 +79,28 @@ export async function iniciarPainelAdmin() {
     await carregarDadosGlobais();
 }
 
+/* ======================================
+   🔥 CARREGA DADOS + EVENTOS (SCORE)
+====================================== */
 async function carregarDadosGlobais() {
     try {
         const token = localStorage.getItem("derso_session_token");
-        const resp = await fetch(`${CONFIG.API_URL}?action=readall&token=${token}`);
-        const dados = await resp.json();
+
+        const [dadosResp, eventosResp] = await Promise.all([
+            fetch(`${CONFIG.API_URL}?action=readall&token=${token}`),
+            fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`)
+        ]);
+
+        const dados = await dadosResp.json();
+        const eventos = await eventosResp.json();
 
         if (dados.error) throw new Error(dados.error);
 
         STATE.listaCompletaAdmin = dados;
+        STATE.eventosPush = eventos || [];
+
+        calcularScore();
+
         renderizarTudo(dados);
         inicializarGrafico(dados);
 
@@ -96,14 +109,45 @@ async function carregarDadosGlobais() {
     }
 }
 
+/* ======================================
+   🧠 SCORE COMPORTAMENTAL
+====================================== */
+function calcularScore() {
+    const eventos = STATE.eventosPush || [];
+    const scoreMap = {};
+
+    eventos.forEach(ev => {
+        if (!scoreMap[ev.matricula]) scoreMap[ev.matricula] = 0;
+
+        if (ev.status === "ABERTO") {
+            scoreMap[ev.matricula] += 1;
+        }
+
+        if (ev.status === "IGNORADO") {
+            scoreMap[ev.matricula] -= 1;
+        }
+    });
+
+    STATE.scoreMap = scoreMap;
+}
+
+/* ======================================
+   📊 RENDER
+====================================== */
 function renderizarTudo(lista) {
     const tbody = document.getElementById("adminTableBody");
-    document.getElementById("countTotal").textContent = lista.length;
-    
-    const mesAtual = (new Date().getMonth() + 1).toString().padStart(2, '0');
-    document.getElementById("countMes").textContent = lista.filter(i => i.data.split('/')[1] === mesAtual).length;
 
-    tbody.innerHTML = lista.map(item => `
+    document.getElementById("countTotal").textContent = lista.length;
+
+    const mesAtual = (new Date().getMonth() + 1).toString().padStart(2, '0');
+
+    document.getElementById("countMes").textContent =
+        lista.filter(i => i.data.split('/')[1] === mesAtual).length;
+
+    tbody.innerHTML = lista.map(item => {
+        const score = STATE.scoreMap[item.matricula] || 0;
+
+        return `
         <tr>
             <td>
                 <div style="font-weight:700; font-size:13px;">${item.nome}</div>
@@ -111,12 +155,20 @@ function renderizarTudo(lista) {
             </td>
             <td style="font-size:11px; font-weight:bold;">${item.data}</td>
             <td><span class="tag-folga">${item.folga}</span></td>
+            <td style="font-weight:bold; color:${score >= 0 ? '#2E7D32' : '#C62828'}">
+                ${score}
+            </td>
         </tr>
-    `).join("");
+        `;
+    }).join("");
 }
 
+/* ======================================
+   📈 GRÁFICO
+====================================== */
 function inicializarGrafico(dados) {
     const ctx = document.getElementById('chartFolgas').getContext('2d');
+
     const tipos = {};
     dados.forEach(d => tipos[d.folga] = (tipos[d.folga] || 0) + 1);
 
@@ -133,35 +185,56 @@ function inicializarGrafico(dados) {
                 borderRadius: 5
             }]
         },
-        options: { plugins: { legend: { display: false } } }
+        options: {
+            plugins: { legend: { display: false } }
+        }
     });
 }
 
+/* ======================================
+   🔍 FILTRO
+====================================== */
 function filtrarPainel() {
     const termo = document.getElementById("adminSearch").value.toLowerCase();
     const mes = document.getElementById("filterMes").value;
-    
+
     const filtrados = STATE.listaCompletaAdmin.filter(i => {
-        const bateTexto = i.nome.toLowerCase().includes(termo) || i.matricula.includes(termo);
-        const bateMes = mes === "" || i.data.split('/')[1] === mes;
+        const bateTexto =
+            i.nome.toLowerCase().includes(termo) ||
+            i.matricula.includes(termo);
+
+        const bateMes =
+            mes === "" || i.data.split('/')[1] === mes;
+
         return bateTexto && bateMes;
     });
 
     renderizarTudo(filtrados);
 }
 
+/* ======================================
+   📥 EXPORT
+====================================== */
 function exportarParaEscala() {
     const dados = STATE.listaCompletaAdmin;
     if (!dados || dados.length === 0) return;
 
-    let csv = "\ufeffDATA;MATRICULA;NOME;TIPO_FOLGA\n";
+    let csv = "\ufeffDATA;MATRICULA;NOME;TIPO_FOLGA;SCORE\n";
+
     dados.forEach(i => {
-        csv += `${i.data};${i.matricula};${i.nome};${i.folga || i.tipo}\n`;
+        const score = STATE.scoreMap[i.matricula] || 0;
+        csv += `${i.data};${i.matricula};${i.nome};${i.folga || i.tipo};${score}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `DERSO_1BPM_${new Date().toISOString().split('T')[0]}.csv`);
+
+    link.setAttribute(
+        "download",
+        `DERSO_SCORE_${new Date().toISOString().split('T')[0]}.csv`
+    );
+
     link.click();
 }
