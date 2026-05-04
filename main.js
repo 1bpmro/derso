@@ -36,7 +36,7 @@ function verificarInstalacao() {
         setTimeout(() => {
             UI.modal.show(
                 "INSTALAÇÃO RECOMENDADA",
-                "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos e acompanhar seu Score.",
+                "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos.",
                 isIOS ? "⎋" : "📲", 
                 "#1a3c6e"
             );
