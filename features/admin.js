@@ -35,7 +35,7 @@ export async function iniciarPainelAdmin() {
                 </div>
             </div>
 
-            <!-- 🔥 NOVO BLOCO DE PUSH -->
+            <!-- 🔥 STATS DE PUSH -->
             <div class="admin-stats">
                 <div class="stat-box">
                     <span id="countPush">0</span>
@@ -53,6 +53,12 @@ export async function iniciarPainelAdmin() {
                     <span id="taxaResposta">0%</span>
                     <label>Taxa</label>
                 </div>
+            </div>
+
+            <!-- 📡 PUSH MANUAL -->
+            <div style="margin:20px 0;">
+                <input id="pushMensagem" placeholder="Mensagem do push..." class="admin-input">
+                <button id="btnEnviarPush" class="btn-export">📡 Enviar Push</button>
             </div>
 
             <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
@@ -96,11 +102,14 @@ export async function iniciarPainelAdmin() {
     document.getElementById("filterMes").onchange = filtrarPainel;
     document.getElementById("btnExportCSV").onclick = exportarParaEscala;
 
+    // 🔥 EVENTO DO PUSH MANUAL
+    document.getElementById("btnEnviarPush").onclick = enviarPushManual;
+
     await carregarDadosGlobais();
 }
 
 /* ======================================
-   🔥 CARREGA DADOS + PUSH
+   🔥 CARREGA DADOS
 ====================================== */
 async function carregarDadosGlobais() {
     try {
@@ -120,11 +129,9 @@ async function carregarDadosGlobais() {
         STATE.eventosPush = eventos || [];
 
         calcularScore();
-
         renderizarTudo(dados);
         inicializarGrafico(dados);
 
-        // 🔥 AQUI ESTÁ O QUE FALTAVA
         await carregarPushStats();
 
     } catch (err) {
@@ -133,7 +140,23 @@ async function carregarDadosGlobais() {
 }
 
 /* ======================================
-   🔥 PUSH STATS
+   📡 PUSH MANUAL
+====================================== */
+async function enviarPushManual() {
+    const msg = document.getElementById("pushMensagem").value;
+
+    if (!msg) return alert("Digite uma mensagem");
+
+    try {
+        await fetch(`${CONFIG.API_URL}?action=push_manual&mensagem=${encodeURIComponent(msg)}`);
+        alert("Push enviado!");
+    } catch (e) {
+        alert("Erro ao enviar push");
+    }
+}
+
+/* ======================================
+   🔥 STATS
 ====================================== */
 async function carregarPushStats() {
     try {
@@ -167,13 +190,10 @@ function calcularScore() {
     STATE.scoreMap = scoreMap;
 }
 
-/* ======================================
-   🏷️ BADGE
-====================================== */
 function getBadge(score) {
-    if (score >= 3) return `🟢`;
-    if (score >= 0) return `🟡`;
-    return `🔴`;
+    if (score >= 3) return "🟢";
+    if (score >= 0) return "🟡";
+    return "🔴";
 }
 
 /* ======================================
@@ -222,9 +242,7 @@ function inicializarGrafico(dados) {
         type: 'bar',
         data: {
             labels: Object.keys(tipos),
-            datasets: [{
-                data: Object.values(tipos)
-            }]
+            datasets: [{ data: Object.values(tipos) }]
         },
         options: {
             plugins: { legend: { display: false } }
