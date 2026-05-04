@@ -35,6 +35,26 @@ export async function iniciarPainelAdmin() {
                 </div>
             </div>
 
+            <!-- 🔥 NOVO BLOCO DE PUSH -->
+            <div class="admin-stats">
+                <div class="stat-box">
+                    <span id="countPush">0</span>
+                    <label>Push Enviados</label>
+                </div>
+                <div class="stat-box" style="background:#1A3C6E;color:white;">
+                    <span id="countAbertos">0</span>
+                    <label>Abertos</label>
+                </div>
+                <div class="stat-box" style="background:#C62828;color:white;">
+                    <span id="countIgnorados">0</span>
+                    <label>Ignorados</label>
+                </div>
+                <div class="stat-box" style="background:#FFD700;color:black;">
+                    <span id="taxaResposta">0%</span>
+                    <label>Taxa</label>
+                </div>
+            </div>
+
             <div style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
                 <canvas id="chartFolgas" height="150"></canvas>
             </div>
@@ -80,7 +100,7 @@ export async function iniciarPainelAdmin() {
 }
 
 /* ======================================
-   🔥 CARREGA DADOS + EVENTOS
+   🔥 CARREGA DADOS + PUSH
 ====================================== */
 async function carregarDadosGlobais() {
     try {
@@ -104,8 +124,29 @@ async function carregarDadosGlobais() {
         renderizarTudo(dados);
         inicializarGrafico(dados);
 
+        // 🔥 AQUI ESTÁ O QUE FALTAVA
+        await carregarPushStats();
+
     } catch (err) {
         registrarLog("ADMIN_ERRO", err.message, "ERRO");
+    }
+}
+
+/* ======================================
+   🔥 PUSH STATS
+====================================== */
+async function carregarPushStats() {
+    try {
+        const resp = await fetch(`${CONFIG.API_URL}?action=push_stats`);
+        const stats = await resp.json();
+
+        document.getElementById("countPush").textContent = stats.enviados;
+        document.getElementById("countAbertos").textContent = stats.abertos;
+        document.getElementById("countIgnorados").textContent = stats.ignorados;
+        document.getElementById("taxaResposta").textContent = stats.taxa + "%";
+
+    } catch (err) {
+        registrarLog("ADMIN_PUSH", err.message, "ERRO");
     }
 }
 
@@ -119,13 +160,8 @@ function calcularScore() {
     eventos.forEach(ev => {
         if (!scoreMap[ev.matricula]) scoreMap[ev.matricula] = 0;
 
-        if (ev.status === "ABERTO") {
-            scoreMap[ev.matricula] += 1;
-        }
-
-        if (ev.status === "IGNORADO") {
-            scoreMap[ev.matricula] -= 1;
-        }
+        if (ev.status === "ABERTO") scoreMap[ev.matricula] += 1;
+        if (ev.status === "IGNORADO") scoreMap[ev.matricula] -= 1;
     });
 
     STATE.scoreMap = scoreMap;
@@ -135,15 +171,9 @@ function calcularScore() {
    🏷️ BADGE
 ====================================== */
 function getBadge(score) {
-    if (score >= 3) {
-        return `<span style="background:#2E7D32;color:white;padding:4px 8px;border-radius:8px;font-size:11px;">🟢 CONFIÁVEL</span>`;
-    }
-
-    if (score >= 0) {
-        return `<span style="background:#FFD700;color:black;padding:4px 8px;border-radius:8px;font-size:11px;">🟡 NEUTRO</span>`;
-    }
-
-    return `<span style="background:#C62828;color:white;padding:4px 8px;border-radius:8px;font-size:11px;">🔴 CRÍTICO</span>`;
+    if (score >= 3) return `🟢`;
+    if (score >= 0) return `🟡`;
+    return `🔴`;
 }
 
 /* ======================================
@@ -166,14 +196,12 @@ function renderizarTudo(lista) {
         return `
         <tr>
             <td>
-                <div style="font-weight:700; font-size:13px;">${item.nome}</div>
-                <div style="font-size:10px; color:#777;">Mat: ${item.matricula}</div>
+                <div style="font-weight:700;">${item.nome}</div>
+                <div style="font-size:10px;">Mat: ${item.matricula}</div>
             </td>
-            <td style="font-size:11px; font-weight:bold;">${item.data}</td>
-            <td><span class="tag-folga">${item.folga}</span></td>
-            <td style="font-weight:bold;">
-                ${score}<br>${badge}
-            </td>
+            <td>${item.data}</td>
+            <td>${item.folga}</td>
+            <td><b>${score}</b> ${badge}</td>
         </tr>
         `;
     }).join("");
@@ -195,10 +223,7 @@ function inicializarGrafico(dados) {
         data: {
             labels: Object.keys(tipos),
             datasets: [{
-                label: 'Solicitações por Tipo',
-                data: Object.values(tipos),
-                backgroundColor: ['#1A3C6E', '#FFD700', '#2E7D32', '#ef6c00'],
-                borderRadius: 5
+                data: Object.values(tipos)
             }]
         },
         options: {
@@ -239,18 +264,13 @@ function exportarParaEscala() {
 
     dados.forEach(i => {
         const score = STATE.scoreMap[i.matricula] || 0;
-        csv += `${i.data};${i.matricula};${i.nome};${i.folga || i.tipo};${score}\n`;
+        csv += `${i.data};${i.matricula};${i.nome};${i.folga};${score}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-
-    link.setAttribute(
-        "download",
-        `DERSO_SCORE_${new Date().toISOString().split('T')[0]}.csv`
-    );
-
+    link.setAttribute("download", "derso_score.csv");
     link.click();
 }
