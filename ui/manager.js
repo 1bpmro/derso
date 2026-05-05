@@ -32,12 +32,14 @@ export const UI = {
             }
 
             // 4. Controla o conteúdo do Histórico
-            if (DOM.historyContent) {
-                DOM.historyContent.classList.toggle('is-hidden', !showHistory);
-                if (showHistory) {
-                    DOM.historyContent.innerHTML = text; // Aqui entra o conteúdo do .map()
-                }
-            }
+           if (DOM.historyContent) {
+    DOM.historyContent.classList.toggle('is-hidden', !showHistory);
+
+    // 🔥 NÃO sobrescreve o conteúdo se já foi montado antes
+    if (!showHistory) {
+        DOM.historyContent.innerHTML = "";
+    }
+}
         },
 
         /** Fecha o modal e limpa os estados */
