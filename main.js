@@ -45,25 +45,26 @@ function verificarInstalacao() {
 }
 
 async function pedirPermissaoNotificacao() {
-    if (!('Notification' in window)) {
-        console.log('Este navegador não suporta notificações.');
+    if (!('Notification' in window)) return;
+
+    const matricula = localStorage.getItem("matricula_usuario");
+
+    if (!matricula) {
+        console.warn("⚠️ Matrícula não encontrada. Push não será registrado.");
         return;
     }
 
     if (Notification.permission === 'granted') {
-        registrarDispositivo();
+        registrarDispositivo(matricula);
         return;
     }
 
-    if (Notification.permission === 'denied') {
-        console.log('❌ Permissão negada.');
-        return;
-    }
+    if (Notification.permission === 'denied') return;
 
     const permission = await Notification.requestPermission();
+
     if (permission === 'granted') {
-        console.log('🔔 Permissão concedida');
-        registrarDispositivo();
+        registrarDispositivo(matricula);
     }
 }
 
@@ -123,13 +124,15 @@ async function bootstrap() {
         verificarInstalacao();
 
         // 9. Gestão de Notificações
-        if (Notification.permission === 'default') {
-            setTimeout(() => {
-                pedirPermissaoNotificacao();
-            }, 3000);
-        } else if (Notification.permission === 'granted') {
-            registrarDispositivo();
-        }
+        const matricula = localStorage.getItem("matricula_usuario");
+
+if (Notification.permission === 'default') {
+    setTimeout(() => {
+        pedirPermissaoNotificacao();
+    }, 3000);
+} else if (Notification.permission === 'granted' && matricula) {
+    registrarDispositivo(matricula);
+}
 
     } catch (error) {
         registrarLog("FALHA_CRITICA", error.message, "ERRO");
