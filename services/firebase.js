@@ -1,6 +1,7 @@
 // services/firebase.js
 
 import { registrarLog } from "./logger.js";
+import { CONFIG } from "../core/config.js";
 
 // 🔥 Firebase (ESM via CDN)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -18,60 +19,48 @@ const firebaseConfig = {
 // 🔑 VAPID KEY
 const VAPID_KEY = "BHGFjPdrcahFdPsIVDsA4RA04ArqgiVslZgoZXjwm49O-au9z4hN2TLNQfhYsWdRQnEkZ4khJCaSb-S09dSolkc";
 
-// 🌐 URL DO GAS
-const GAS_URL = "https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec";
-
 // Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-/**
- * Solicita permissão do usuário
- */
+/* ====================================== */
+/* 🔔 PERMISSÃO */
+/* ====================================== */
 export async function solicitarPermissaoNotificacao() {
   if (!("Notification" in window)) {
     registrarLog("PUSH", "Navegador não suporta notificações", "ERRO");
     return false;
   }
 
-  if (Notification.permission === "granted") {
-    registrarLog("PUSH", "Permissão já concedida", "INFO");
-    return true;
-  }
-
-  if (Notification.permission === "denied") {
-    registrarLog("PUSH", "Permissão negada pelo usuário", "ERRO");
-    return false;
-  }
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
 
   const permission = await Notification.requestPermission();
-
-  if (permission === "granted") {
-    registrarLog("PUSH", "Permissão concedida", "SUCESSO");
-    return true;
-  } else {
-    registrarLog("PUSH", "Usuário recusou notificações", "ERRO");
-    return false;
-  }
+  return permission === "granted";
 }
 
-/**
- * Registra o Service Worker corretamente (GitHub Pages = subpasta!)
- */
+/* ====================================== */
+/* 🧠 SERVICE WORKER */
+/* ====================================== */
 async function registrarServiceWorker() {
   try {
-    const registration = await navigator.serviceWorker.register("/derso/firebase-messaging-sw.js");
-    registrarLog("PUSH", "Service Worker registrado com sucesso", "SUCESSO");
+    // 🔥 CAMINHO DINÂMICO (corrige bug do GitHub Pages)
+    const swPath = "/derso/firebase-messaging-sw.js";
+
+    const registration = await navigator.serviceWorker.register(swPath);
+
+    registrarLog("PUSH", "Service Worker registrado", "SUCESSO");
+
     return registration;
   } catch (error) {
-    registrarLog("PUSH", "Erro ao registrar Service Worker: " + error.message, "ERRO");
+    registrarLog("PUSH", "Erro SW: " + error.message, "ERRO");
     throw error;
   }
 }
 
-/**
- * Gera token e envia para o GAS
- */
+/* ====================================== */
+/* 📡 REGISTRAR DISPOSITIVO */
+/* ====================================== */
 export async function registrarDispositivo(matricula) {
   try {
     if (!matricula) {
@@ -80,44 +69,49 @@ export async function registrarDispositivo(matricula) {
     }
 
     const permitido = await solicitarPermissaoNotificacao();
-    if (!permitido) return;
+    if (!permitido) {
+      registrarLog("PUSH", "Permissão negada", "ERRO");
+      return;
+    }
 
-    // 🧠 registra SW no caminho correto
     const registration = await registrarServiceWorker();
 
-    // 🔑 gera token
+    // 🔑 TOKEN FIREBASE
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration
     });
 
     if (!token) {
-      registrarLog("PUSH", "Token não gerado", "ERRO");
+      registrarLog("PUSH", "Token vazio", "ERRO");
       return;
     }
 
-    registrarLog("PUSH", "Token gerado com sucesso", "SUCESSO");
+    registrarLog("PUSH", "Token gerado", "SUCESSO");
+    console.log("🔥 TOKEN FIREBASE:", token);
 
-    // 🔄 envia pro GAS
-    const formData = new URLSearchParams();
-formData.append("action", "salvar_token");
-formData.append("matricula", matricula);
-formData.append("token", token);
-
-const resp = await fetch(GAS_URL, {
-  method: "POST",
-  body: formData
-});
+    // 🔥 ENVIO CORRETO PARA GAS
+    const resp = await fetch(CONFIG.API_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        action: "salvar_token",
+        matricula: matricula,
+        token: token
+      })
+    });
 
     const result = await resp.json().catch(() => ({}));
+
+    console.log("📡 RESPOSTA GAS:", result);
 
     if (result.success) {
       registrarLog("PUSH", "Dispositivo registrado no servidor", "SUCESSO");
     } else {
-      registrarLog("PUSH", "Falha ao salvar no servidor", "ERRO");
+      registrarLog("PUSH", "Falha ao salvar token no servidor", "ERRO");
     }
 
   } catch (error) {
-    registrarLog("PUSH", "Erro ao registrar dispositivo: " + error.message, "ERRO");
+    console.error("🔥 ERRO PUSH:", error);
+    registrarLog("PUSH", error.message, "ERRO");
   }
 }
