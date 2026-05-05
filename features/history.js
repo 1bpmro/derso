@@ -4,7 +4,7 @@
 import { CONFIG } from "../core/config.js";
 import { DOM } from "../core/dom.js";
 import { registrarLog } from "../services/logger.js";
-import { UI } from "../ui/manager.js"; // Usando o gerenciador de interface padrão
+import { UI } from "../ui/manager.js";
 
 export async function fetchHistory(mat) {
 
@@ -29,9 +29,11 @@ export async function fetchHistory(mat) {
     );
 
     try {
-        const response = await fetch(
-            `${CONFIG.API_URL}?action=historico&matricula=${encodeURIComponent(mat)}`
-        );
+        const url = `${CONFIG.API_URL}?action=historico&matricula=${encodeURIComponent(mat)}`;
+
+        console.log("🌐 HISTÓRICO URL:", url);
+
+        const response = await fetch(url);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -39,27 +41,40 @@ export async function fetchHistory(mat) {
 
         const r = await response.json();
 
-        // Verifica se existem dados no retorno da sua API
-        if (r?.dados?.length > 0) {
-            registrarLog("PESQUISA", `${r.dados.length} registros encontrados`, "SUCESSO");
+        console.log("📦 HISTÓRICO RESPOSTA:", r);
+
+        // 🔥 tratamento de erro vindo da API
+        if (r?.error) {
+            throw new Error(r.error);
+        }
+
+        const lista = Array.isArray(r?.dados) ? r.dados : [];
+
+        if (lista.length > 0) {
+            registrarLog("PESQUISA", `${lista.length} registros encontrados`, "SUCESSO");
 
             if (DOM.historyContent) {
-                DOM.historyContent.innerHTML = r.dados
-                    .map(i => `
-                        <div class="historico-item" style="padding: 8px; border-bottom: 1px solid #eee;">
-                            <span>📅 ${i.data}</span> - 
-                            <b>${i.folga || i.tipo || "Registro"}</b>
-                        </div>
-                    `)
+                DOM.historyContent.innerHTML = lista
+                    .map(i => {
+                        const data = i?.data || "Sem data";
+                        const tipo = i?.folga || i?.tipo || "Registro";
+
+                        return `
+                            <div class="historico-item" style="padding: 8px; border-bottom: 1px solid #eee;">
+                                <span>📅 ${data}</span> - 
+                                <b>${tipo}</b>
+                            </div>
+                        `;
+                    })
                     .join("");
             }
 
             UI.modal.show(
-                r.nome || "REGISTROS",
-                "Solicitações encontradas:",
+                r?.nome || "REGISTROS",
+                `Encontrados ${lista.length} registro(s)`,
                 "📋",
                 "#1A3C6E",
-                true // Parâmetro para indicar que deve exibir o conteúdo do historyContent
+                true
             );
 
         } else {
@@ -74,11 +89,12 @@ export async function fetchHistory(mat) {
         }
 
     } catch (e) {
+        console.error("🔥 ERRO HISTÓRICO:", e);
         registrarLog("PESQUISA_FALHA", e.message, "ERRO");
 
         UI.modal.show(
             "ERRO",
-            "Falha na comunicação com o servidor.",
+            "Falha ao buscar histórico.",
             "❌",
             "red"
         );
