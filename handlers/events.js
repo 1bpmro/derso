@@ -83,15 +83,7 @@ export function setupEvents() {
         if (militar && militar.nome) {
             DOM.nome.value = militar.nome;
 
-            // 🚀 REGISTRO INTELIGENTE DO PUSH (por matrícula)
-            const registrado = localStorage.getItem("push_registrado");
-
-            if (registrado !== val) {
-                registrarDispositivo(val);
-                localStorage.setItem("push_registrado", val);
-            }
-
-            if (erroEl) erroEl.style.display = "none";
+           if (erroEl) erroEl.style.display = "none";
             registrarLog("VALIDACAO", `Militar: ${militar.nome}`, "SUCESSO");
             applyInstitutionalTheme(val);
 
