@@ -1,13 +1,14 @@
-// features/admin.js
-
 import { STATE } from "../core/state.js";
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 
+const getToken = () => localStorage.getItem("derso_session_token");
+
+/* ====================================== */
 export async function iniciarPainelAdmin() {
     window.__ADMIN_MODE__ = true;
 
-    const token = localStorage.getItem("derso_session_token");
+    const token = getToken();
 
     if (!token) {
         alert("Sessão inválida. Faça login novamente.");
@@ -15,10 +16,9 @@ export async function iniciarPainelAdmin() {
         return;
     }
 
+    // 🔥 garante Chart carregado antes de usar
     if (!window.Chart) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-        document.head.appendChild(script);
+        await carregarChartJS();
     }
 
     const container = document.getElementById("formContent");
@@ -35,9 +35,19 @@ export async function iniciarPainelAdmin() {
 }
 
 /* ====================================== */
+function carregarChartJS() {
+    return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.onload = resolve;
+        document.head.appendChild(script);
+    });
+}
+
+/* ====================================== */
 async function carregarDadosGlobais() {
     try {
-        const token = localStorage.getItem("derso_session_token");
+        const token = getToken();
 
         console.log("🔑 TOKEN USADO:", token);
 
@@ -52,11 +62,20 @@ async function carregarDadosGlobais() {
         console.log("📦 DADOS:", dados);
         console.log("📡 EVENTOS:", eventos);
 
+        // 🔥 validação forte
         if (dados.error) throw new Error(dados.error);
         if (eventos.error) throw new Error(eventos.error);
 
+        if (!Array.isArray(dados)) {
+            throw new Error("Formato inválido em readall");
+        }
+
+        if (!Array.isArray(eventos)) {
+            console.warn("⚠️ Eventos não é array, corrigindo...");
+        }
+
         STATE.listaCompletaAdmin = dados;
-        STATE.eventosPush = eventos;
+        STATE.eventosPush = Array.isArray(eventos) ? eventos : [];
 
         calcularScore();
         renderizarTudo(dados);
@@ -74,9 +93,10 @@ async function carregarDadosGlobais() {
 /* ====================================== */
 async function enviarPushManual() {
     const msg = document.getElementById("pushMensagem").value;
-    const token = localStorage.getItem("derso_session_token");
+    const token = getToken();
 
     if (!msg) return alert("Digite uma mensagem");
+    if (!token) return alert("Sessão expirada");
 
     try {
         const resp = await fetch(
@@ -88,8 +108,10 @@ async function enviarPushManual() {
         if (res.error) throw new Error(res.error);
 
         alert("Push enviado!");
+        document.getElementById("pushMensagem").value = "";
+
     } catch (e) {
-        console.error(e);
+        console.error("🔥 PUSH ERRO:", e);
         alert("Erro ao enviar push");
     }
 }
@@ -97,7 +119,7 @@ async function enviarPushManual() {
 /* ====================================== */
 async function carregarPushStats() {
     try {
-        const token = localStorage.getItem("derso_session_token");
+        const token = getToken();
 
         const resp = await fetch(`${CONFIG.API_URL}?action=push_stats&token=${token}`);
         const stats = await resp.json();
@@ -110,17 +132,21 @@ async function carregarPushStats() {
         document.getElementById("taxaResposta").textContent = (stats.taxa || 0) + "%";
 
     } catch (err) {
-        console.error(err);
+        console.error("🔥 STATS ERRO:", err);
         registrarLog("ADMIN_PUSH", err.message, "ERRO");
     }
 }
 
 /* ====================================== */
 function calcularScore() {
-    const eventos = STATE.eventosPush || [];
+    const eventos = STATE.eventosPush;
     const scoreMap = {};
 
+    if (!Array.isArray(eventos)) return;
+
     eventos.forEach(ev => {
+        if (!ev.matricula) return;
+
         if (!scoreMap[ev.matricula]) scoreMap[ev.matricula] = 0;
 
         if (ev.status === "ABERTO") scoreMap[ev.matricula] += 1;
@@ -130,6 +156,7 @@ function calcularScore() {
     STATE.scoreMap = scoreMap;
 }
 
+/* ====================================== */
 function getBadge(score) {
     if (score >= 3) return "🟢";
     if (score >= 0) return "🟡";
@@ -140,15 +167,20 @@ function getBadge(score) {
 function renderizarTudo(lista) {
     const tbody = document.getElementById("adminTableBody");
 
+    if (!Array.isArray(lista)) {
+        tbody.innerHTML = `<tr><td colspan="4">Erro ao carregar dados</td></tr>`;
+        return;
+    }
+
     document.getElementById("countTotal").textContent = lista.length;
 
     const mesAtual = (new Date().getMonth() + 1).toString().padStart(2, '0');
 
     document.getElementById("countMes").textContent =
-        lista.filter(i => i.data.split('/')[1] === mesAtual).length;
+        lista.filter(i => i.data?.split('/')[1] === mesAtual).length;
 
     tbody.innerHTML = lista.map(item => {
-        const score = STATE.scoreMap[item.matricula] || 0;
+        const score = STATE.scoreMap?.[item.matricula] || 0;
         const badge = getBadge(score);
 
         return `
