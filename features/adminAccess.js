@@ -1,3 +1,5 @@
+//features/adminAccess.js
+
 import { iniciarPainelAdmin } from "./admin.js";
 import { CONFIG } from "../core/config.js";
 
@@ -23,7 +25,18 @@ export function configurarAcessoAdmin() {
     });
 
     const btnLogin = document.getElementById("btnAdminLogin");
-    btnLogin?.addEventListener("click", validarAcessoAdmin);
+
+    btnLogin?.addEventListener("click", async () => {
+        if (btnLogin.disabled) return;
+
+        btnLogin.disabled = true;
+
+        try {
+            await validarAcessoAdmin();
+        } finally {
+            btnLogin.disabled = false;
+        }
+    });
 }
 
 /* ====================================== */
@@ -58,7 +71,15 @@ async function validarAcessoAdmin() {
 
         console.log("🌐 URL LOGIN:", url);
 
-        const resp = await fetch(url);
+        // 🔥 Timeout inteligente
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        const resp = await fetch(url, {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
 
         if (!resp.ok) {
             throw new Error("Erro HTTP: " + resp.status);
@@ -70,7 +91,7 @@ async function validarAcessoAdmin() {
 
         if (dados.autorizado && dados.token) {
 
-            // 🔥 limpa qualquer lixo antigo
+            // 🔥 limpeza segura
             localStorage.removeItem("adminToken");
 
             // 🔥 salva token padrão
@@ -80,10 +101,10 @@ async function validarAcessoAdmin() {
 
             fecharModalAdmin();
 
-            // pequeno delay evita bug visual
-            setTimeout(() => {
+            // 🔥 transição suave (sem travar UI)
+            requestAnimationFrame(() => {
                 iniciarPainelAdmin();
-            }, 200);
+            });
 
         } else {
             alert("Credenciais inválidas.");
@@ -92,6 +113,11 @@ async function validarAcessoAdmin() {
 
     } catch (err) {
         console.error("🔥 ERRO LOGIN:", err);
-        alert("Erro ao conectar ao servidor de autenticação.");
+
+        if (err.name === "AbortError") {
+            alert("Servidor demorou para responder.");
+        } else {
+            alert("Erro ao conectar ao servidor de autenticação.");
+        }
     }
 }
