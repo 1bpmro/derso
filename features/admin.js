@@ -18,7 +18,7 @@ export async function iniciarPainelAdmin() {
 
     // 🔥 garante Chart carregado antes de usar
     if (!window.Chart) {
-        await carregarChartJS();
+    carregarChartJS();
     }
 
     const container = document.getElementById("formContent");
@@ -31,7 +31,9 @@ export async function iniciarPainelAdmin() {
     document.getElementById("btnExportCSV").onclick = exportarParaEscala;
     document.getElementById("btnEnviarPush").onclick = enviarPushManual;
 
-    await carregarDadosGlobais();
+   setTimeout(() => {
+    carregarDadosGlobais();
+}, 100);
 }
 
 /* ====================================== */
