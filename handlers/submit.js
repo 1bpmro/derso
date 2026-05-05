@@ -7,11 +7,12 @@ import { registrarLog } from "../services/logger.js";
 import { updateProgress } from "../services/progress.js";
 import { salvarRascunho } from "../services/storage.js";
 import { UI } from "../ui/manager.js"; 
+import { registrarDispositivo } from "../services/firebase.js";
 
 export async function handleSubmit(e) {
     e.preventDefault();
 
-    // 1. NORMALIZAÇÃO DE SEGURANÇA (Dentro da função!)
+    // 1. NORMALIZAÇÃO DE SEGURANÇA
     let matriculaLimpa = DOM.matricula.value.trim().replace(/\D/g, '');
     if (matriculaLimpa && matriculaLimpa.length <= 6 && !matriculaLimpa.startsWith("1000")) {
         matriculaLimpa = "1000" + matriculaLimpa;
@@ -54,8 +55,25 @@ export async function handleSubmit(e) {
             throw new Error("Resposta inválida do servidor");
         }
 
+        /* ======================================
+           ✅ SUCESSO
+        ====================================== */
         if (response.success || response.result === "success") {
+
             registrarLog("SUCESSO", `Solicitação de ${mLog} registrada`, "SUCESSO");
+
+            // 🚀 REGISTRO INTELIGENTE DO PUSH (APENAS 1x POR MATRÍCULA)
+            const matricula = DOM.matricula.value;
+            const jaRegistrado = localStorage.getItem("push_registrado");
+
+            if (matricula && jaRegistrado !== matricula) {
+                try {
+                    await registrarDispositivo(matricula);
+                    localStorage.setItem("push_registrado", matricula);
+                } catch (err) {
+                    console.warn("⚠️ Falha ao registrar push (não crítico):", err);
+                }
+            }
 
             UI.modal.show(
                 "SUCESSO!",
@@ -66,7 +84,7 @@ export async function handleSubmit(e) {
 
             limparFormulario();
             UI.feedback.flash(DOM.form); 
-            UI.feedback.scrollToTop();   
+            UI.feedback.scrollToTop();
 
         } else {
             tratarErroServidor(response);
@@ -84,6 +102,7 @@ export async function handleSubmit(e) {
             "📡",
             "red"
         );
+
     } finally {
         UI.feedback.unlockForm(); 
         UI.loading.hide();
@@ -97,7 +116,7 @@ export async function handleSubmit(e) {
 function limparFormulario() {
     if (DOM.form) {
         DOM.form.reset();
-        UI.updateProgress(); 
+        updateProgress(); 
         salvarRascunho({}); 
         registrarLog("FORM_RESET", "Formulário limpo após envio");
     }
@@ -106,8 +125,10 @@ function limparFormulario() {
 function tratarErroServidor(response) {
     registrarLog("ENVIO_NEGADO", `Servidor recusou: ${response.message}`, "AVISO");
 
-    // Ajustado para bater com a frase exata do seu Código.gs
-    if (response.message?.includes("Já existe") || response.message?.toLowerCase().includes("duplicada")) {
+    if (
+        response.message?.includes("Já existe") ||
+        response.message?.toLowerCase().includes("duplicada")
+    ) {
         UI.modal.show(
             "SOLICITAÇÃO DUPLICADA",
             "Você já solicitou folga para esta data.",
@@ -124,5 +145,6 @@ function tratarErroServidor(response) {
         "⚠️",
         "orange"
     );
+
     UI.feedback.shake(DOM.form);
 }
