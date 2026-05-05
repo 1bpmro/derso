@@ -33,7 +33,10 @@ export async function solicitarPermissaoNotificacao() {
   }
 
   if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
+  if (Notification.permission === "denied") {
+    registrarLog("PUSH", "Permissão já negada", "ERRO");
+    return false;
+  }
 
   const permission = await Notification.requestPermission();
   return permission === "granted";
@@ -44,12 +47,17 @@ export async function solicitarPermissaoNotificacao() {
 /* ====================================== */
 async function registrarServiceWorker() {
   try {
-    // 🔥 CAMINHO DINÂMICO (corrige bug do GitHub Pages)
-    const swPath = "/derso/firebase-messaging-sw.js";
+    // 🔥 Corrige GitHub Pages + fallback automático
+    let swPath = "/firebase-messaging-sw.js";
+
+    if (location.hostname.includes("github.io")) {
+      swPath = "/derso/firebase-messaging-sw.js";
+    }
 
     const registration = await navigator.serviceWorker.register(swPath);
 
     registrarLog("PUSH", "Service Worker registrado", "SUCESSO");
+    console.log("📡 SW PATH:", swPath);
 
     return registration;
   } catch (error) {
@@ -90,7 +98,9 @@ export async function registrarDispositivo(matricula) {
     registrarLog("PUSH", "Token gerado", "SUCESSO");
     console.log("🔥 TOKEN FIREBASE:", token);
 
-    // 🔥 ENVIO CORRETO PARA GAS
+    /* ======================================
+       📡 ENVIO PARA GAS (VERSÃO ROBUSTA)
+    ====================================== */
     const resp = await fetch(CONFIG.API_URL, {
       method: "POST",
       body: new URLSearchParams({
@@ -100,14 +110,26 @@ export async function registrarDispositivo(matricula) {
       })
     });
 
-    const result = await resp.json().catch(() => ({}));
+    const text = await resp.text();
 
-    console.log("📡 RESPOSTA GAS:", result);
+    console.log("📡 RESPOSTA BRUTA GAS:", text);
+
+    let result = {};
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      registrarLog("PUSH", "Resposta inválida do servidor", "ERRO");
+      return;
+    }
 
     if (result.success) {
       registrarLog("PUSH", "Dispositivo registrado no servidor", "SUCESSO");
     } else {
-      registrarLog("PUSH", "Falha ao salvar token no servidor", "ERRO");
+      registrarLog(
+        "PUSH",
+        "Falha ao salvar: " + (result.message || "Erro desconhecido"),
+        "ERRO"
+      );
     }
 
   } catch (error) {
