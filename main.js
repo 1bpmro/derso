@@ -1,4 +1,5 @@
 // main.js - DERSO v7 (Com Score e Pressão Institucional)
+
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
 import { DOM } from "./core/dom.js";
@@ -14,9 +15,12 @@ import { registrarDispositivo } from "./services/firebase.js";
 
 window.__ADMIN_MODE__ = false;
 
-/**
- * LIMPEZA DE NOTIFICAÇÕES E BADGES
- */
+// 🔥 expõe pra debug no console
+window.registrarDispositivo = registrarDispositivo;
+
+/* ====================================== */
+/* 🔔 LIMPEZA VISUAL */
+/* ====================================== */
 function limparAlertasVisuais() {
     if ('clearAppBadge' in navigator) {
         navigator.clearAppBadge().catch((err) => {
@@ -25,9 +29,9 @@ function limparAlertasVisuais() {
     }
 }
 
-/**
- * PRESSÃO PSICOLÓGICA: Verifica se o app está instalado (PWA Standalone)
- */
+/* ====================================== */
+/* 📲 PWA CHECK */
+/* ====================================== */
 function verificarInstalacao() {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -37,20 +41,33 @@ function verificarInstalacao() {
             UI.modal.show(
                 "INSTALAÇÃO RECOMENDADA",
                 "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos.",
-                isIOS ? "⎋" : "📲", 
+                isIOS ? "⎋" : "📲",
                 "#1a3c6e"
             );
-        }, 5000); // 5 segundos após o carregamento
+        }, 5000);
     }
 }
 
+/* ====================================== */
+/* 🔔 PUSH */
+/* ====================================== */
 async function pedirPermissaoNotificacao() {
     if (!('Notification' in window)) return;
 
-    const matricula = localStorage.getItem("matricula_usuario");
+    let matricula = localStorage.getItem("matricula_usuario");
+
+    // 🔥 fallback: tenta capturar do input se não existir
+    if (!matricula) {
+        const input = document.getElementById("matricula");
+        matricula = input?.value?.trim();
+
+        if (matricula) {
+            localStorage.setItem("matricula_usuario", matricula);
+        }
+    }
 
     if (!matricula) {
-        console.warn("⚠️ Matrícula não encontrada. Push não será registrado.");
+        console.warn("⚠️ Matrícula não encontrada. Push ignorado.");
         return;
     }
 
@@ -68,76 +85,84 @@ async function pedirPermissaoNotificacao() {
     }
 }
 
-/**
- * PONTO DE ENTRADA ÚNICO (Bootstrap)
- */
+/* ====================================== */
+/* 🚀 BOOTSTRAP */
+/* ====================================== */
 async function bootstrap() {
-    // 0. Limpa badges e alertas ao abrir
     limparAlertasVisuais();
 
     registrarLog("SISTEMA", "Iniciando motor DERSO v7...", "INFO");
 
     if (!DOM.loading || !DOM.formContent) {
-        console.error("Falha Crítica: Elementos essenciais não encontrados.");
+        console.error("Falha Crítica: DOM incompleto.");
         return;
     }
 
     try {
-        // 1. Estado Inicial
         UI.loading.show("Sincronizando com o servidor...");
         applyDarkModeStyles();
 
-        // 2. Busca de Dados Unificada (Inclui Score agora)
         registrarLog("SISTEMA", "Buscando dados institucionais e Score...");
-        
+
         const response = await fetch(`${CONFIG.API_URL}?action=get_initial_data`);
-        if (!response.ok) throw new Error("Erro ao conectar com o servidor Google.");
-        
+        if (!response.ok) throw new Error("Erro ao conectar com o servidor.");
+
         const result = await response.json();
 
-        // 3. População do Estado (STATE)
-        STATE.employeeList = result.lista || {}; 
-        STATE.userScore = result.score || 0; // Armazena o Score vindo do servidor
+        STATE.employeeList = result.lista || {};
+        STATE.userScore = result.score || 0;
+
         const dData = result.datas;
 
-        registrarLog("SISTEMA", `Dados carregados. Seu Score: ${STATE.userScore}`, "SUCESSO");
+        registrarLog("SISTEMA", `Dados carregados. Score: ${STATE.userScore}`, "SUCESSO");
 
-        // 4. Ativação de Serviços: Monitora prazos
         if (dData?.abertura && dData?.fechamento) {
             monitorarPrazos(dData.abertura, dData.fechamento);
         }
 
-        // 5. Configuração da Interface
         applyInstitutionalTheme();
         updateFooter();
-        setupEvents(); // Ativa os listeners
+        setupEvents();
 
-        // 6. Segurança e Rascunho
         configurarAcessoAdmin();
         restaurarRascunho();
 
-        // 7. Finalização do Loading
         UI.loading.hide();
         registrarLog("SISTEMA", "Operacional.", "SUCESSO");
 
-        // 8. Verificação de PWA (Standalone)
         verificarInstalacao();
 
-        // 9. Gestão de Notificações
-        const matricula = localStorage.getItem("matricula_usuario");
+        /* ======================================
+           🔥 REGISTRO DE PUSH (ROBUSTO)
+        ====================================== */
+        let matricula = localStorage.getItem("matricula_usuario");
 
-if (Notification.permission === 'default') {
-    setTimeout(() => {
-        pedirPermissaoNotificacao();
-    }, 3000);
-} else if (Notification.permission === 'granted' && matricula) {
-    registrarDispositivo(matricula);
-}
+        // fallback extra
+        if (!matricula) {
+            const input = document.getElementById("matricula");
+            matricula = input?.value?.trim();
+
+            if (matricula) {
+                localStorage.setItem("matricula_usuario", matricula);
+            }
+        }
+
+        if (!matricula) {
+            console.warn("⚠️ Push não ativado (sem matrícula)");
+            return;
+        }
+
+        if (Notification.permission === 'default') {
+            setTimeout(pedirPermissaoNotificacao, 3000);
+        } else if (Notification.permission === 'granted') {
+            registrarDispositivo(matricula);
+        }
 
     } catch (error) {
         registrarLog("FALHA_CRITICA", error.message, "ERRO");
+
         UI.loading.hide();
-        
+
         UI.modal.show(
             "ERRO DE CONEXÃO",
             "Não foi possível conectar ao banco de dados.",
@@ -147,5 +172,4 @@ if (Notification.permission === 'default') {
     }
 }
 
-// Inicia o sistema
 document.addEventListener("DOMContentLoaded", bootstrap);
