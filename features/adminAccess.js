@@ -1,5 +1,5 @@
 import { iniciarPainelAdmin } from "./admin.js";
-import { CONFIG } from "../core/config.js"; // 🔥 FALTAVA ISSO
+import { CONFIG } from "../core/config.js";
 
 let contadorCliques = 0;
 let temporizador = null;
@@ -26,14 +26,17 @@ export function configurarAcessoAdmin() {
     btnLogin?.addEventListener("click", validarAcessoAdmin);
 }
 
+/* ====================================== */
 function abrirModalAdmin() {
     document.getElementById("adminLoginModal")?.classList.remove("is-hidden");
 }
 
+/* ====================================== */
 function fecharModalAdmin() {
     document.getElementById("adminLoginModal")?.classList.add("is-hidden");
 }
 
+/* ====================================== */
 async function validarAcessoAdmin() {
     const input = document.getElementById("adminMatricula");
     const matricula = input?.value.trim();
@@ -45,10 +48,21 @@ async function validarAcessoAdmin() {
 
     const senha = prompt("Digite a senha administrativa:");
 
+    if (!senha) {
+        alert("Senha não informada");
+        return;
+    }
+
     try {
-        const resp = await fetch(
-            `${CONFIG.API_URL}?action=adminlogin&matricula=${matricula}&senha=${senha}`
-        );
+        const url = `${CONFIG.API_URL}?action=adminlogin&matricula=${encodeURIComponent(matricula)}&senha=${encodeURIComponent(senha)}`;
+
+        console.log("🌐 URL LOGIN:", url);
+
+        const resp = await fetch(url);
+
+        if (!resp.ok) {
+            throw new Error("Erro HTTP: " + resp.status);
+        }
 
         const dados = await resp.json();
 
@@ -56,11 +70,20 @@ async function validarAcessoAdmin() {
 
         if (dados.autorizado && dados.token) {
 
-            // 🔥 PADRONIZA O TOKEN
+            // 🔥 limpa qualquer lixo antigo
+            localStorage.removeItem("adminToken");
+
+            // 🔥 salva token padrão
             localStorage.setItem("derso_session_token", dados.token);
 
+            console.log("✅ TOKEN SALVO:", dados.token);
+
             fecharModalAdmin();
-            iniciarPainelAdmin();
+
+            // pequeno delay evita bug visual
+            setTimeout(() => {
+                iniciarPainelAdmin();
+            }, 200);
 
         } else {
             alert("Credenciais inválidas.");
@@ -68,7 +91,7 @@ async function validarAcessoAdmin() {
         }
 
     } catch (err) {
-        console.error(err);
-        alert("Erro ao conectar ao servidor.");
+        console.error("🔥 ERRO LOGIN:", err);
+        alert("Erro ao conectar ao servidor de autenticação.");
     }
 }
