@@ -1,6 +1,10 @@
-const CACHE_NAME = 'derso-v6-final'; // Incrementei a versão para forçar atualização
+/* ======================================
+   🚀 DERSO PWA - SERVICE WORKER v7 FINAL
+====================================== */
 
-// Arquivos que o app precisa para abrir mesmo sem sinal
+const CACHE_NAME = 'derso-v7';
+
+// Arquivos essenciais offline
 const ASSETS_TO_CACHE = [
   './',
   'index.html',
@@ -11,56 +15,82 @@ const ASSETS_TO_CACHE = [
   'assets/icon-512.png'
 ];
 
-// 1. Instalação e Cache Inicial
+/* ======================================
+   🔥 FIREBASE (UNIFICADO)
+====================================== */
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDqAtLFEwpxN2Yhju8X8I0QeHWR66copLc",
+  authDomain: "derso-8294b.firebaseapp.com",
+  projectId: "derso-8294b",
+  messagingSenderId: "1056159074696",
+  appId: "1:1056159074696:web:90962abec6bf703c5d923d"
+});
+
+const messaging = firebase.messaging();
+
+/* ======================================
+   📦 INSTALL
+====================================== */
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('PWA DERSO: Cacheando arquivos operacionais...');
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('📦 Cacheando assets essenciais...');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// 2. Limpeza de caches antigos
+/* ======================================
+   ♻️ ACTIVATE
+====================================== */
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME)
-                  .map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME)
+            .map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// 3. ESTRATÉGIA: Cache First, then Network
+/* ======================================
+   🌐 FETCH (ANTI-BUG PWA)
+====================================== */
 self.addEventListener('fetch', (event) => {
-  // Não cacheia chamadas da API do Google ou Google Scripts
-  if (event.request.url.includes('google.com') || event.request.url.includes('exec')) {
+  const url = new URL(event.request.url);
+
+  // 🚫 NÃO INTERCEPTAR APIs EXTERNAS
+  if (
+    url.hostname.includes("google.com") ||
+    url.hostname.includes("gstatic.com") ||
+    url.hostname.includes("firebase") ||
+    url.pathname.includes("/exec")
+  ) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Atualiza o cache em background
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const responseClone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, responseClone);
-              });
-            }
-          })
-          .catch(() => {}); // Falhou? Ignora.
+    caches.match(event.request).then(cached => {
 
-        return cachedResponse;
+      if (cached) {
+        // 🔄 atualiza em background
+        fetch(event.request).then(network => {
+          if (network && network.status === 200) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, network.clone());
+            });
+          }
+        }).catch(() => {});
+
+        return cached;
       }
 
       return fetch(event.request).catch(() => {
-        // Se falhar a rede e não tiver cache, tenta o index
         if (event.request.mode === 'navigate') {
           return caches.match('index.html');
         }
@@ -69,77 +99,71 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 4. Receber PUSH e exibir notificação (Compatível com Firebase V1)
-self.addEventListener('push', (event) => {
-  let data = {};
-  
-  if (event.data) {
-    try {
-      const rawData = event.data.json();
-      // A API V1 do Firebase coloca os campos dentro de 'data' ou 'notification'
-      // Ajustamos para ler o payload que você definiu no Apps Script
-      data = rawData.notification || rawData.data || rawData;
-      
-      // Se vier do Firebase V1 diretamente, os dados customizados ficam em data.data
-      if (rawData.data) {
-        data.type = rawData.data.type || data.type;
-        data.url = rawData.data.url || data.url;
-      }
-    } catch (e) {
-      console.error("Erro ao processar JSON do Push:", e);
-    }
-  }
+/* ======================================
+   🔔 PUSH (FIREBASE BACKGROUND)
+====================================== */
+messaging.onBackgroundMessage((payload) => {
+  console.log("📩 PUSH RECEBIDO:", payload);
 
-  const title = data.title || 'DERSO';
-  const body = data.body || 'Você tem uma nova atualização no sistema.';
-  const type = data.type || 'default';
+  const notification = payload.notification || {};
+  const data = payload.data || {};
+
+  const title = notification.title || "DERSO";
+  const body = notification.body || "Nova atualização disponível.";
 
   const options = {
-    body: body,
-    icon: 'assets/icon-192.png',
-    badge: 'assets/icon-192.png', // Ícone da barra de status
+    body,
+    icon: '/assets/icon-192.png',
+    badge: '/assets/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
-      url: data.url || '/'
+      url: data.url || '/',
+      eventId: data.eventId || null
     }
   };
 
-  event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(title, options),
-      // 🔴 Xeque-mate: Ativa a bolinha se for pendência
-      (async () => {
-        if (type === 'pendente' && 'setAppBadge' in navigator) {
-          try {
-            await navigator.setAppBadge(1);
-          } catch (err) {
-            console.error("Erro ao definir badge:", err);
-          }
-        }
-      })()
-    ])
-  );
+  self.registration.showNotification(title, options);
 });
 
-// 5. Clique na notificação
+/* ======================================
+   🖱️ CLICK NA NOTIFICAÇÃO
+====================================== */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const urlToOpen = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  const data = event.notification.data || {};
+  const url = new URL(data.url || '/', self.location.origin).href;
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        // Se o app já estiver aberto, foca nele
-        for (const client of clientList) {
-          if (client.url === urlToOpen && 'focus' in client) {
-            return client.focus();
-          }
+    (async () => {
+      const clientsList = await clients.matchAll({
+        type: "window",
+        includeUncontrolled: true
+      });
+
+      let encontrou = false;
+
+      for (const client of clientsList) {
+        if (client.url.includes(url)) {
+          encontrou = true;
+          client.focus();
+          break;
         }
-        // Senão, abre uma nova aba/janela do PWA
-        if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
-        }
-      })
+      }
+
+      if (!encontrou) {
+        await clients.openWindow(url);
+      }
+
+      // 📡 Notifica o GAS (push aberto)
+      if (data.eventId) {
+        fetch("https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec?action=push_aberto", {
+          method: "POST",
+          body: new URLSearchParams({
+            eventId: data.eventId
+          })
+        }).catch(() => {});
+      }
+    })()
   );
 });
