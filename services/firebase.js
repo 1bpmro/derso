@@ -48,7 +48,11 @@ export async function solicitarPermissaoNotificacao() {
 async function registrarServiceWorker() {
   try {
     // 🔥 Corrige GitHub Pages + fallback automático
-    let swPath = "/firebase-messaging-sw.js";
+    let swPath = "/sw.js";
+
+if (location.hostname.includes("github.io")) {
+  swPath = "/derso/sw.js";
+}
 
     if (location.hostname.includes("github.io")) {
       swPath = "/derso/firebase-messaging-sw.js";
