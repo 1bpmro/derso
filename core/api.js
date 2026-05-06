@@ -7,20 +7,26 @@ async function safeFetch(url, options = {}) {
         throw new Error(`Erro HTTP ${res.status}`);
     }
 
+    const text = await res.text();
+
     try {
-        return await res.json();
+        return JSON.parse(text);
     } catch {
+        console.warn("⚠️ Resposta não é JSON:", text);
         throw new Error("Resposta inválida do servidor");
     }
 }
 
 export async function carregarDadosIniciais() {
-    const [dResp, lResp] = await Promise.all([
+    const results = await Promise.allSettled([
         safeFetch(`${CONFIG.API_URL}?action=datas`),
         safeFetch(`${CONFIG.API_URL}?action=lista`)
     ]);
 
-    return { datas: dResp, lista: lResp };
+    return {
+        datas: results[0].status === "fulfilled" ? results[0].value : [],
+        lista: results[1].status === "fulfilled" ? results[1].value : []
+    };
 }
 
 export async function enviarFormulario(formData) {
