@@ -1,0 +1,1 @@
+importScripts('/derso/sw.js');
