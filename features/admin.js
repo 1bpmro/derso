@@ -1,8 +1,12 @@
+//features/admin.js
+
 import { STATE } from "../core/state.js";
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 
 const getToken = () => localStorage.getItem("adminToken");
+
+let graficoAdmin = null;
 
 /* ====================================== */
 export async function iniciarPainelAdmin() {
@@ -29,7 +33,7 @@ export async function iniciarPainelAdmin() {
 
         const container = document.getElementById("formContent");
 
-      container.innerHTML = `
+        container.innerHTML = `
 <div class="admin-wrapper" style="padding:20px;">
 
     <div style="
@@ -54,12 +58,12 @@ export async function iniciarPainelAdmin() {
         margin-bottom:20px;
     ">
         <div class="card">
-            <strong>Total</strong>
+            <strong>Total Policiais</strong>
             <div id="countTotal">0</div>
         </div>
 
         <div class="card">
-            <strong>Mês Atual</strong>
+            <strong>Total Folgas</strong>
             <div id="countMes">0</div>
         </div>
 
@@ -93,12 +97,12 @@ export async function iniciarPainelAdmin() {
         <input
             type="text"
             id="adminSearch"
-            placeholder="Pesquisar..."
+            placeholder="Pesquisar policial..."
             style="flex:1; min-width:200px;"
         >
 
         <select id="filterMes">
-            <option value="">Todos os meses</option>
+            <option value="">Mês Atual</option>
             <option value="01">Janeiro</option>
             <option value="02">Fevereiro</option>
             <option value="03">Março</option>
@@ -112,6 +116,10 @@ export async function iniciarPainelAdmin() {
             <option value="11">Novembro</option>
             <option value="12">Dezembro</option>
         </select>
+
+        <button id="btnAtualizar" class="btn btn-outline">
+            🔄 Atualizar
+        </button>
 
         <button id="btnExportCSV" class="btn btn-primary">
             📤 EXPORTAR
@@ -158,8 +166,7 @@ export async function iniciarPainelAdmin() {
             <thead>
                 <tr style="background:#f2f2f2;">
                     <th style="padding:10px;">Policial</th>
-                    <th style="padding:10px;">Data</th>
-                    <th style="padding:10px;">Folga</th>
+                    <th style="padding:10px;">Folgas</th>
                     <th style="padding:10px;">Score</th>
                 </tr>
             </thead>
@@ -182,26 +189,21 @@ export async function iniciarPainelAdmin() {
 
         console.log("✅ HTML ADMIN INSERIDO");
 
-        console.log("btnAdminExit", !!document.getElementById("btnAdminExit"));
-        console.log("adminSearch", !!document.getElementById("adminSearch"));
-        console.log("filterMes", !!document.getElementById("filterMes"));
-        console.log("btnExportCSV", !!document.getElementById("btnExportCSV"));
-        console.log("btnEnviarPush", !!document.getElementById("btnEnviarPush"));
+        document.getElementById("btnAdminExit").onclick = () => {
+            location.reload();
+        };
 
-        console.log("filtrarPainel", typeof filtrarPainel);
-        console.log("exportarParaEscala", typeof exportarParaEscala);
-        console.log("inicializarGrafico", typeof inicializarGrafico);
+        document.getElementById("btnAtualizar").onclick = () => {
+            carregarDadosGlobais();
+        };
 
-        document.getElementById("btnAdminExit").onclick = () => location.reload();
+        document.getElementById("adminSearch").oninput = filtrarPainel;
 
-        if (typeof filtrarPainel === "function") {
-            document.getElementById("adminSearch").oninput = filtrarPainel;
-            document.getElementById("filterMes").onchange = filtrarPainel;
-        }
+        document.getElementById("filterMes").onchange = () => {
+            carregarDadosGlobais();
+        };
 
-        if (typeof exportarParaEscala === "function") {
-            document.getElementById("btnExportCSV").onclick = exportarParaEscala;
-        }
+        document.getElementById("btnExportCSV").onclick = exportarCSV;
 
         document.getElementById("btnEnviarPush").onclick = enviarPushManual;
 
@@ -212,15 +214,16 @@ export async function iniciarPainelAdmin() {
     } catch (err) {
 
         console.error("💥 ERRO iniciarPainelAdmin:", err);
+        alert("Erro ao iniciar painel admin");
 
     }
 }
 
 /* ====================================== */
 function carregarChartJS() {
+
     return new Promise((resolve) => {
 
-        // 🔥 evita duplicar
         if (window.Chart) {
             resolve();
             return;
@@ -230,30 +233,45 @@ function carregarChartJS() {
 
         script.src = "https://cdn.jsdelivr.net/npm/chart.js";
 
-       script.onload = () => {
-    console.log("📊 Chart.js carregado");
-    resolve();
-};
+        script.onload = () => {
+            console.log("📊 Chart.js carregado");
+            resolve();
+        };
 
-script.onerror = () => {
-    console.error("❌ Falha ao carregar Chart.js");
-    resolve(); // evita travar o painel
-};
+        script.onerror = () => {
+            console.error("❌ Falha Chart.js");
+            resolve();
+        };
 
         document.head.appendChild(script);
+
     });
+
 }
 
 /* ====================================== */
 async function carregarDadosGlobais() {
-    try {
-       const token = getToken();
 
-console.log("🧪 TOKEN RECUPERADO:", token);
+    try {
+
+        const token = getToken();
+
+        const mesSelecionado =
+            document.getElementById("filterMes")?.value ||
+            String(new Date().getMonth() + 1).padStart(2, "0");
+
+        console.log("📅 MÊS:", mesSelecionado);
 
         const [dadosResp, eventosResp] = await Promise.all([
-            fetch(`${CONFIG.API_URL}?action=readall&token=${token}`),
-            fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`)
+
+            fetch(
+                `${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mesSelecionado}`
+            ),
+
+            fetch(
+                `${CONFIG.API_URL}?action=push_eventos&token=${token}`
+            )
+
         ]);
 
         const dados = await dadosResp.json();
@@ -262,107 +280,165 @@ console.log("🧪 TOKEN RECUPERADO:", token);
         console.log("📦 DADOS:", dados);
         console.log("📡 EVENTOS:", eventos);
 
-        // 🔥 validação forte
-        if (dados.error) throw new Error(dados.error);
-        if (eventos.error) throw new Error(eventos.error);
-
-        if (!Array.isArray(dados)) {
-            throw new Error("Formato inválido em readall");
+        if (dados.error) {
+            throw new Error(dados.error);
         }
 
-        if (!Array.isArray(eventos)) {
-            console.warn("⚠️ Eventos não é array, corrigindo...");
+        if (eventos.error) {
+            throw new Error(eventos.error);
+        }
+
+        if (!Array.isArray(dados)) {
+            throw new Error("Dados admin inválidos");
         }
 
         STATE.listaCompletaAdmin = dados;
-        STATE.eventosPush = Array.isArray(eventos) ? eventos : [];
+        STATE.eventosPush = Array.isArray(eventos)
+            ? eventos
+            : [];
 
         calcularScore();
-        renderizarTudo(dados);
-        if (typeof inicializarGrafico === "function") {
-    inicializarGrafico(dados);
-}
 
-        await carregarPushStats();
+        renderizarTudo(dados);
+
+        inicializarGrafico(dados);
+
+        carregarPushStats();
 
     } catch (err) {
+
         console.error("🔥 ERRO ADMIN:", err);
-        registrarLog("ADMIN_ERRO", err.message, "ERRO");
-        alert("Erro ao carregar dados do admin.");
+
+        registrarLog(
+            "ADMIN_ERRO",
+            err.message,
+            "ERRO"
+        );
+
+        alert("Erro ao carregar admin");
+
     }
+
 }
 
 /* ====================================== */
 async function enviarPushManual() {
-    const msg = document.getElementById("pushMensagem").value;
+
+    const msg = document.getElementById("pushMensagem").value.trim();
+
     const token = getToken();
 
-    if (!msg) return alert("Digite uma mensagem");
-    if (!token) return alert("Sessão expirada");
+    if (!msg) {
+        alert("Digite uma mensagem");
+        return;
+    }
 
     try {
+
         const resp = await fetch(
             `${CONFIG.API_URL}?action=push_manual&mensagem=${encodeURIComponent(msg)}&token=${token}`
         );
 
         const res = await resp.json();
 
-        if (res.error) throw new Error(res.error);
+        console.log("📡 PUSH:", res);
+
+        if (res.error) {
+            throw new Error(res.error);
+        }
 
         alert("Push enviado!");
+
         document.getElementById("pushMensagem").value = "";
 
-    } catch (e) {
-        console.error("🔥 PUSH ERRO:", e);
+        carregarPushStats();
+
+    } catch (err) {
+
+        console.error("🔥 PUSH ERRO:", err);
+
         alert("Erro ao enviar push");
+
     }
+
 }
 
 /* ====================================== */
 async function carregarPushStats() {
+
     try {
+
         const token = getToken();
 
-        const resp = await fetch(`${CONFIG.API_URL}?action=push_stats&token=${token}`);
+        const resp = await fetch(
+            `${CONFIG.API_URL}?action=push_stats&token=${token}`
+        );
+
         const stats = await resp.json();
 
-        if (stats.error) throw new Error(stats.error);
+        console.log("📊 STATS:", stats);
 
-        document.getElementById("countPush").textContent = stats.enviados || 0;
-        document.getElementById("countAbertos").textContent = stats.abertos || 0;
-        document.getElementById("countIgnorados").textContent = stats.ignorados || 0;
-        document.getElementById("taxaResposta").textContent = (stats.taxa || 0) + "%";
+        if (stats.error) {
+            throw new Error(stats.error);
+        }
+
+        document.getElementById("countPush").textContent =
+            stats.enviados || 0;
+
+        document.getElementById("countAbertos").textContent =
+            stats.abertos || 0;
+
+        document.getElementById("countIgnorados").textContent =
+            stats.ignorados || 0;
+
+        document.getElementById("taxaResposta").textContent =
+            `${stats.taxa || 0}%`;
 
     } catch (err) {
+
         console.error("🔥 STATS ERRO:", err);
-        registrarLog("ADMIN_PUSH", err.message, "ERRO");
+
     }
+
 }
 
 /* ====================================== */
 function calcularScore() {
-    const eventos = STATE.eventosPush;
+
+    const eventos = STATE.eventosPush || [];
+
     const scoreMap = {};
 
-    if (!Array.isArray(eventos)) return;
-
     eventos.forEach(ev => {
+
         if (!ev.matricula) return;
 
-        if (!scoreMap[ev.matricula]) scoreMap[ev.matricula] = 0;
+        if (!scoreMap[ev.matricula]) {
+            scoreMap[ev.matricula] = 0;
+        }
 
-        if (ev.status === "ABERTO") scoreMap[ev.matricula] += 1;
-        if (ev.status === "IGNORADO") scoreMap[ev.matricula] -= 1;
+        if (ev.status === "ABERTO") {
+            scoreMap[ev.matricula] += 1;
+        }
+
+        if (ev.status === "IGNORADO") {
+            scoreMap[ev.matricula] -= 1;
+        }
+
     });
 
     STATE.scoreMap = scoreMap;
+
 }
 
 /* ====================================== */
 function getBadge(score) {
+
     if (score >= 3) return "🟢";
     if (score >= 0) return "🟡";
+
     return "🔴";
+
 }
 
 /* ====================================== */
@@ -371,79 +447,252 @@ function renderizarTudo(lista) {
     const tbody = document.getElementById("adminTableBody");
 
     if (!Array.isArray(lista)) {
+
         tbody.innerHTML = `
             <tr>
-                <td colspan="4">Erro ao carregar dados</td>
+                <td colspan="3">
+                    Nenhum dado encontrado
+                </td>
             </tr>
         `;
+
         return;
+
     }
 
-    const mesAtual = (new Date().getMonth() + 1)
-        .toString()
-        .padStart(2, "0");
-
-    // 🔥 filtra somente mês atual
-    const listaMes = lista.filter(item =>
-        item.data?.split("/")[1] === mesAtual
-    );
-
-    // 🔥 agrupa por matrícula
     const agrupado = {};
 
-    listaMes.forEach(item => {
+    lista.forEach(item => {
 
-        const mat = item.matricula;
+        const mat = item.matricula || "SEM_MATRICULA";
 
         if (!agrupado[mat]) {
+
             agrupado[mat] = {
-                nome: item.nome,
+                nome: item.nome || "SEM NOME",
                 matricula: mat,
                 datas: [],
                 total: 0
             };
+
         }
 
-        agrupado[mat].datas.push(item.data.split("/")[0]); // só dia
+        agrupado[mat].datas.push(item.data || "-");
+
         agrupado[mat].total++;
+
     });
 
     const resultado = Object.values(agrupado);
 
-    document.getElementById("countTotal").textContent = resultado.length;
+    document.getElementById("countTotal").textContent =
+        resultado.length;
 
     document.getElementById("countMes").textContent =
-        listaMes.length;
+        lista.length;
 
     tbody.innerHTML = resultado.map(item => {
 
-        const score = STATE.scoreMap?.[item.matricula] || 0;
+        const score =
+            STATE.scoreMap?.[item.matricula] || 0;
+
         const badge = getBadge(score);
 
         return `
-        <tr>
-            <td>
-                <div style="font-weight:700;">
-                    ${item.nome}
-                </div>
+<tr>
+    <td style="padding:10px;border-bottom:1px solid #eee;">
+        <div style="font-weight:700;">
+            ${item.nome}
+        </div>
 
-                <div style="font-size:10px;">
-                    Mat: ${item.matricula}
-                </div>
-            </td>
+        <div style="font-size:11px;color:#777;">
+            Mat: ${item.matricula}
+        </div>
+    </td>
 
-            <td>
-                <b>${item.total}x</b>
-                <div style="font-size:11px;color:#666;">
-                    ${item.datas.join(", ")}
-                </div>
-            </td>
+    <td style="padding:10px;border-bottom:1px solid #eee;">
+        <b>${item.total}x</b>
 
-            <td>
-                <b>${score}</b> ${badge}
-            </td>
-        </tr>
-        `;
+        <div style="
+            font-size:11px;
+            color:#666;
+            margin-top:4px;
+        ">
+            ${item.datas.join(", ")}
+        </div>
+    </td>
+
+    <td style="
+        padding:10px;
+        border-bottom:1px solid #eee;
+        font-weight:700;
+    ">
+        ${score} ${badge}
+    </td>
+</tr>
+`;
 
     }).join("");
+
+}
+
+/* ====================================== */
+function filtrarPainel() {
+
+    const termo =
+        document.getElementById("adminSearch")
+            .value
+            .toLowerCase();
+
+    const filtrado =
+        STATE.listaCompletaAdmin.filter(item => {
+
+            const nome =
+                (item.nome || "").toLowerCase();
+
+            const matricula =
+                String(item.matricula || "");
+
+            return (
+                nome.includes(termo) ||
+                matricula.includes(termo)
+            );
+
+        });
+
+    renderizarTudo(filtrado);
+
+}
+
+/* ====================================== */
+function exportarCSV() {
+
+    try {
+
+        const lista = STATE.listaCompletaAdmin || [];
+
+        if (!lista.length) {
+            alert("Sem dados");
+            return;
+        }
+
+        let csv =
+            "Nome,Matrícula,Data\n";
+
+        lista.forEach(item => {
+
+            csv += `"${item.nome}","${item.matricula}","${item.data}"\n`;
+
+        });
+
+        const blob = new Blob(
+            [csv],
+            { type: "text/csv;charset=utf-8;" }
+        );
+
+        const url = URL.createObjectURL(blob);
+
+        const link =
+            document.createElement("a");
+
+        link.href = url;
+
+        link.download =
+            `escala_admin.csv`;
+
+        link.click();
+
+    } catch (err) {
+
+        console.error("🔥 CSV ERRO:", err);
+
+        alert("Erro ao exportar");
+
+    }
+
+}
+
+/* ====================================== */
+function inicializarGrafico(lista) {
+
+    try {
+
+        const ctx =
+            document.getElementById("graficoAdmin");
+
+        if (!ctx) return;
+
+        const agrupado = {};
+
+        lista.forEach(item => {
+
+            const dia =
+                item.data?.split("/")[0];
+
+            if (!dia) return;
+
+            if (!agrupado[dia]) {
+                agrupado[dia] = 0;
+            }
+
+            agrupado[dia]++;
+
+        });
+
+        const labels =
+            Object.keys(agrupado);
+
+        const valores =
+            Object.values(agrupado);
+
+        if (graficoAdmin) {
+            graficoAdmin.destroy();
+        }
+
+        graficoAdmin = new Chart(ctx, {
+
+            type: "bar",
+
+            data: {
+
+                labels,
+
+                datasets: [{
+                    label: "Folgas por Dia",
+                    data: valores,
+                    borderWidth: 1
+                }]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                plugins: {
+
+                    legend: {
+                        display: true
+                    }
+
+                },
+
+                scales: {
+
+                    y: {
+                        beginAtZero: true
+                    }
+
+                }
+
+            }
+
+        });
+
+    } catch (err) {
+
+        console.error("🔥 GRÁFICO ERRO:", err);
+
+    }
+
 }
