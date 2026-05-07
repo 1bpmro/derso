@@ -95,7 +95,7 @@ async function validarAcessoAdmin() {
             localStorage.removeItem("adminToken");
 
             // 🔥 salva token padrão
-            localStorage.setItem("derso_session_token", dados.token);
+            localStorage.setItem("adminToken", dados.token);
 
             console.log("✅ TOKEN SALVO:", dados.token);
 
