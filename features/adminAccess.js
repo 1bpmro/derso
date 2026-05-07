@@ -87,7 +87,10 @@ async function validarAcessoAdmin() {
 
         const dados = await resp.json();
 
-        console.log("🔐 LOGIN:", dados);
+console.log("🧪 DADOS LOGIN:", JSON.stringify(dados));
+console.log("🧪 TOKEN:", dados.token);
+
+console.log("🔐 LOGIN:", dados);
 
         if (dados.autorizado && dados.token) {
 
