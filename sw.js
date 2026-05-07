@@ -2,19 +2,19 @@
    🚀 DERSO PWA - SERVICE WORKER v8
 ====================================== */
 
-const CACHE_NAME = 'derso-v8';
+const CACHE_NAME = "derso-v8";
 
 /* ======================================
    📦 ARQUIVOS ESSENCIAIS
 ====================================== */
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './styles.css',
-  './main.js',
-  './manifest.json',
-  './assets/icon-192.png',
-  './assets/icon-512.png'
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./main.js",
+  "./manifest.json",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png"
 ];
 
 /* ======================================
@@ -36,111 +36,111 @@ const messaging = firebase.messaging();
 /* ======================================
    📦 INSTALL
 ====================================== */
-self.addEventListener('install', (event) => {
-
+self.addEventListener("install", (event) => {
   console.log("📦 Instalando SW v8...");
 
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS_TO_CACHE))
-      .then(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
 });
 
 /* ======================================
    ♻️ ACTIVATE
 ====================================== */
-self.addEventListener('activate', (event) => {
-
+self.addEventListener("activate", (event) => {
   console.log("♻️ Ativando SW v8...");
 
   event.waitUntil(
-    caches.keys().then(keys => {
+    (async () => {
 
-      return Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => {
-            console.log("🗑️ Removendo cache antigo:", key);
+      // 🔥 remove caches antigos
+      const keys = await caches.keys();
+
+      await Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log("🗑️ Removendo cache:", key);
             return caches.delete(key);
-          })
+          }
+        })
       );
 
-    }).then(() => self.clients.claim())
-  );
+      // 🔥 força controle imediato
+      await self.clients.claim();
 
+    })()
+  );
 });
 
 /* ======================================
    🌐 FETCH
 ====================================== */
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
 
-  // 🚫 ignora métodos não GET
-  if (event.request.method !== "GET") return;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  const url = new URL(event.request.url);
-
-  // 🚫 NÃO INTERCEPTAR APIs EXTERNAS
+  // 🚫 IGNORA APIs
   if (
-    url.hostname.includes("google.com") ||
-    url.hostname.includes("gstatic.com") ||
+    url.hostname.includes("google") ||
+    url.hostname.includes("gstatic") ||
     url.hostname.includes("firebase") ||
     url.pathname.includes("/exec")
   ) {
     return;
   }
 
+  // 🚫 IGNORA POST
+  if (req.method !== "GET") {
+    return;
+  }
+
   event.respondWith(
+    (async () => {
 
-    caches.match(event.request).then((cachedResponse) => {
+      try {
 
-      // ✅ retorna cache imediatamente
-      if (cachedResponse) {
-        return cachedResponse;
+        // 🔥 NETWORK FIRST
+        const networkResponse = await fetch(req);
+
+        // 🔥 salva cache apenas assets locais
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          url.origin === location.origin
+        ) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(req, networkResponse.clone());
+        }
+
+        return networkResponse;
+
+      } catch (err) {
+
+        // 🔥 fallback cache
+        const cached = await caches.match(req);
+
+        if (cached) {
+          return cached;
+        }
+
+        // 🔥 fallback navegação
+        if (req.mode === "navigate") {
+          return caches.match("./index.html");
+        }
+
       }
 
-      // 🌐 busca rede
-      return fetch(event.request)
-        .then((networkResponse) => {
-
-          // 🚫 não cacheia resposta inválida
-          if (
-            !networkResponse ||
-            networkResponse.status !== 200 ||
-            networkResponse.type !== "basic"
-          ) {
-            return networkResponse;
-          }
-
-          // 📦 clona e salva cache
-          const responseClone = networkResponse.clone();
-
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-
-          return networkResponse;
-
-        })
-        .catch(() => {
-
-          // 📄 fallback navegação offline
-          if (event.request.mode === "navigate") {
-            return caches.match("./index.html");
-          }
-
-        });
-
-    })
-
+    })()
   );
-
 });
 
 /* ======================================
-   🔔 PUSH BACKGROUND
+   🔔 PUSH
 ====================================== */
 messaging.onBackgroundMessage((payload) => {
 
@@ -150,15 +150,14 @@ messaging.onBackgroundMessage((payload) => {
   const data = payload.data || {};
 
   const title = notification.title || "DERSO";
-  const body = notification.body || "Nova atualização disponível.";
 
   const options = {
-    body,
-    icon: './assets/icon-192.png',
-    badge: './assets/icon-192.png',
+    body: notification.body || "Nova atualização disponível.",
+    icon: "./assets/icon-192.png",
+    badge: "./assets/icon-192.png",
     vibrate: [200, 100, 200],
     data: {
-      url: data.url || '/',
+      url: data.url || "./",
       eventId: data.eventId || null
     }
   };
@@ -168,17 +167,16 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 /* ======================================
-   🖱️ CLICK NA NOTIFICAÇÃO
+   🖱️ CLICK NOTIFICAÇÃO
 ====================================== */
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener("notificationclick", (event) => {
 
   event.notification.close();
 
   const data = event.notification.data || {};
-  const url = new URL(data.url || '/', self.location.origin).href;
+  const destino = data.url || "./";
 
   event.waitUntil(
-
     (async () => {
 
       const clientsList = await clients.matchAll({
@@ -188,32 +186,15 @@ self.addEventListener('notificationclick', (event) => {
 
       for (const client of clientsList) {
 
-        if (client.url.includes(url)) {
+        if (client.url.includes(destino)) {
           await client.focus();
           return;
         }
-
       }
 
-      await clients.openWindow(url);
-
-      // 📡 informa GAS
-      if (data.eventId) {
-
-        fetch(
-          "https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec?action=push_aberto",
-          {
-            method: "POST",
-            body: new URLSearchParams({
-              eventId: data.eventId
-            })
-          }
-        ).catch(() => {});
-
-      }
+      await clients.openWindow(destino);
 
     })()
-
   );
 
 });
