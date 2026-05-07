@@ -6,35 +6,65 @@ const getToken = () => localStorage.getItem("adminToken");
 
 /* ====================================== */
 export async function iniciarPainelAdmin() {
-    console.log("🧠 Painel admin iniciado");
-    window.__ADMIN_MODE__ = true;
 
-    const token = getToken();
+    try {
 
-    if (!token) {
-        alert("Sessão inválida. Faça login novamente.");
-        location.reload();
-        return;
+        console.log("🧠 Painel admin iniciado");
+
+        window.__ADMIN_MODE__ = true;
+
+        const token = getToken();
+
+        console.log("🧪 TOKEN:", token);
+
+        if (!token) {
+            alert("Sessão inválida. Faça login novamente.");
+            location.reload();
+            return;
+        }
+
+        if (!window.Chart) {
+            await carregarChartJS();
+        }
+
+        const container = document.getElementById("formContent");
+
+        container.innerHTML = `...`;
+
+        console.log("✅ HTML ADMIN INSERIDO");
+
+        console.log("btnAdminExit", !!document.getElementById("btnAdminExit"));
+        console.log("adminSearch", !!document.getElementById("adminSearch"));
+        console.log("filterMes", !!document.getElementById("filterMes"));
+        console.log("btnExportCSV", !!document.getElementById("btnExportCSV"));
+        console.log("btnEnviarPush", !!document.getElementById("btnEnviarPush"));
+
+        console.log("filtrarPainel", typeof filtrarPainel);
+        console.log("exportarParaEscala", typeof exportarParaEscala);
+        console.log("inicializarGrafico", typeof inicializarGrafico);
+
+        document.getElementById("btnAdminExit").onclick = () => location.reload();
+
+        if (typeof filtrarPainel === "function") {
+            document.getElementById("adminSearch").oninput = filtrarPainel;
+            document.getElementById("filterMes").onchange = filtrarPainel;
+        }
+
+        if (typeof exportarParaEscala === "function") {
+            document.getElementById("btnExportCSV").onclick = exportarParaEscala;
+        }
+
+        document.getElementById("btnEnviarPush").onclick = enviarPushManual;
+
+        setTimeout(() => {
+            carregarDadosGlobais();
+        }, 100);
+
+    } catch (err) {
+
+        console.error("💥 ERRO iniciarPainelAdmin:", err);
+
     }
-
-    // 🔥 garante Chart carregado antes de usar
-   if (!window.Chart) {
-    await carregarChartJS();
-}
-
-    const container = document.getElementById("formContent");
-
-    container.innerHTML = `...`; // mantém seu HTML igual
-
-    document.getElementById("btnAdminExit").onclick = () => location.reload();
-    document.getElementById("adminSearch").oninput = filtrarPainel;
-    document.getElementById("filterMes").onchange = filtrarPainel;
-    document.getElementById("btnExportCSV").onclick = exportarParaEscala;
-    document.getElementById("btnEnviarPush").onclick = enviarPushManual;
-
-   setTimeout(() => {
-    carregarDadosGlobais();
-}, 100);
 }
 
 /* ====================================== */
