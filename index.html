@@ -137,14 +137,6 @@
     
     <script type="module" src="main.js"></script>
 
-    <script>
-  if ('serviceWorker' in navigator) {
-    // O ponto antes da barra (./) é essencial para subpastas
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log("PWA: DERSO operacional no escopo:", reg.scope))
-      .catch(err => console.error("PWA: Erro no registro", err));
-  }
-</script>
     
 </body>
 </html>
