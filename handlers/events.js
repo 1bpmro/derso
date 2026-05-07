@@ -132,7 +132,7 @@ async function abrirPortaAdmin() {
         const result = await resp.json();
 
         if (result.autorizado) {
-            localStorage.setItem("derso_session_token", result.token);
+            localStorage.setItem("adminToken", result.token);
             registrarLog("ADMIN", `Acesso autorizado: ${result.nome}`, "SUCESSO");
 
             const { iniciarPainelAdmin } = await import("../features/admin.js");
