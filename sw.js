@@ -1,22 +1,24 @@
 /* ======================================
-   🚀 DERSO PWA - SERVICE WORKER v7 FINAL
+   🚀 DERSO PWA - SERVICE WORKER v8
 ====================================== */
 
-const CACHE_NAME = 'derso-v7';
+const CACHE_NAME = 'derso-v8';
 
-// Arquivos essenciais offline
+/* ======================================
+   📦 ARQUIVOS ESSENCIAIS
+====================================== */
 const ASSETS_TO_CACHE = [
   './',
-  'index.html',
-  'styles.css',
-  'main.js',
-  'manifest.json', 
-  'assets/icon-192.png',
-  'assets/icon-512.png'
+  './index.html',
+  './styles.css',
+  './main.js',
+  './manifest.json',
+  './assets/icon-192.png',
+  './assets/icon-512.png'
 ];
 
 /* ======================================
-   🔥 FIREBASE (UNIFICADO)
+   🔥 FIREBASE
 ====================================== */
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
@@ -35,33 +37,49 @@ const messaging = firebase.messaging();
    📦 INSTALL
 ====================================== */
 self.addEventListener('install', (event) => {
+
+  console.log("📦 Instalando SW v8...");
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('📦 Cacheando assets essenciais...');
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(ASSETS_TO_CACHE))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
+
 });
 
 /* ======================================
    ♻️ ACTIVATE
 ====================================== */
 self.addEventListener('activate', (event) => {
+
+  console.log("♻️ Ativando SW v8...");
+
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME)
-            .map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys().then(keys => {
+
+      return Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => {
+            console.log("🗑️ Removendo cache antigo:", key);
+            return caches.delete(key);
+          })
+      );
+
+    }).then(() => self.clients.claim())
   );
+
 });
 
 /* ======================================
-   🌐 FETCH (ANTI-BUG PWA)
+   🌐 FETCH
 ====================================== */
 self.addEventListener('fetch', (event) => {
+
+  // 🚫 ignora métodos não GET
+  if (event.request.method !== "GET") return;
+
   const url = new URL(event.request.url);
 
   // 🚫 NÃO INTERCEPTAR APIs EXTERNAS
@@ -75,34 +93,57 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
 
-      if (cached) {
-        // 🔄 atualiza em background
-        fetch(event.request).then(network => {
-          if (network && network.status === 200) {
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, network.clone());
-            });
-          }
-        }).catch(() => {});
+    caches.match(event.request).then((cachedResponse) => {
 
-        return cached;
+      // ✅ retorna cache imediatamente
+      if (cachedResponse) {
+        return cachedResponse;
       }
 
-      return fetch(event.request).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('index.html');
-        }
-      });
+      // 🌐 busca rede
+      return fetch(event.request)
+        .then((networkResponse) => {
+
+          // 🚫 não cacheia resposta inválida
+          if (
+            !networkResponse ||
+            networkResponse.status !== 200 ||
+            networkResponse.type !== "basic"
+          ) {
+            return networkResponse;
+          }
+
+          // 📦 clona e salva cache
+          const responseClone = networkResponse.clone();
+
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+
+          return networkResponse;
+
+        })
+        .catch(() => {
+
+          // 📄 fallback navegação offline
+          if (event.request.mode === "navigate") {
+            return caches.match("./index.html");
+          }
+
+        });
+
     })
+
   );
+
 });
 
 /* ======================================
-   🔔 PUSH (FIREBASE BACKGROUND)
+   🔔 PUSH BACKGROUND
 ====================================== */
 messaging.onBackgroundMessage((payload) => {
+
   console.log("📩 PUSH RECEBIDO:", payload);
 
   const notification = payload.notification || {};
@@ -113,8 +154,8 @@ messaging.onBackgroundMessage((payload) => {
 
   const options = {
     body,
-    icon: '/assets/icon-192.png',
-    badge: '/assets/icon-192.png',
+    icon: './assets/icon-192.png',
+    badge: './assets/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
       url: data.url || '/',
@@ -123,47 +164,56 @@ messaging.onBackgroundMessage((payload) => {
   };
 
   self.registration.showNotification(title, options);
+
 });
 
 /* ======================================
    🖱️ CLICK NA NOTIFICAÇÃO
 ====================================== */
 self.addEventListener('notificationclick', (event) => {
+
   event.notification.close();
 
   const data = event.notification.data || {};
   const url = new URL(data.url || '/', self.location.origin).href;
 
   event.waitUntil(
+
     (async () => {
+
       const clientsList = await clients.matchAll({
         type: "window",
         includeUncontrolled: true
       });
 
-      let encontrou = false;
-
       for (const client of clientsList) {
+
         if (client.url.includes(url)) {
-          encontrou = true;
-          client.focus();
-          break;
+          await client.focus();
+          return;
         }
+
       }
 
-      if (!encontrou) {
-        await clients.openWindow(url);
-      }
+      await clients.openWindow(url);
 
-      // 📡 Notifica o GAS (push aberto)
+      // 📡 informa GAS
       if (data.eventId) {
-        fetch("https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec?action=push_aberto", {
-          method: "POST",
-          body: new URLSearchParams({
-            eventId: data.eventId
-          })
-        }).catch(() => {});
+
+        fetch(
+          "https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec?action=push_aberto",
+          {
+            method: "POST",
+            body: new URLSearchParams({
+              eventId: data.eventId
+            })
+          }
+        ).catch(() => {});
+
       }
+
     })()
+
   );
+
 });
