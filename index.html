@@ -137,6 +137,31 @@
     
     <script type="module" src="main.js"></script>
 
+<script>
+if ('serviceWorker' in navigator) {
+
+  window.addEventListener('load', async () => {
+
+    try {
+
+      const swPath = location.hostname.includes("github.io")
+        ? "/derso/sw.js"
+        : "/sw.js";
+
+      const reg = await navigator.serviceWorker.register(swPath);
+
+      console.log("✅ SW GLOBAL:", reg.scope);
+
+    } catch (err) {
+
+      console.error("❌ ERRO SW GLOBAL:", err);
+
+    }
+
+  });
+
+}
+</script>
     
 </body>
 </html>
