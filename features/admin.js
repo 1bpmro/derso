@@ -2,10 +2,11 @@ import { STATE } from "../core/state.js";
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 
-const getToken = () => localStorage.getItem("derso_session_token");
+const getToken = () => localStorage.getItem("adminToken");
 
 /* ====================================== */
 export async function iniciarPainelAdmin() {
+    console.log("🧠 Painel admin iniciado");
     window.__ADMIN_MODE__ = true;
 
     const token = getToken();
@@ -17,9 +18,9 @@ export async function iniciarPainelAdmin() {
     }
 
     // 🔥 garante Chart carregado antes de usar
-    if (!window.Chart) {
-    carregarChartJS();
-    }
+   if (!window.Chart) {
+    await carregarChartJS();
+}
 
     const container = document.getElementById("formContent");
 
@@ -39,9 +40,27 @@ export async function iniciarPainelAdmin() {
 /* ====================================== */
 function carregarChartJS() {
     return new Promise((resolve) => {
+
+        // 🔥 evita duplicar
+        if (window.Chart) {
+            resolve();
+            return;
+        }
+
         const script = document.createElement("script");
+
         script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        script.onload = resolve;
+
+       script.onload = () => {
+    console.log("📊 Chart.js carregado");
+    resolve();
+};
+
+script.onerror = () => {
+    console.error("❌ Falha ao carregar Chart.js");
+    resolve(); // evita travar o painel
+};
+
         document.head.appendChild(script);
     });
 }
