@@ -102,9 +102,10 @@ async function validarAcessoAdmin() {
             fecharModalAdmin();
 
             // 🔥 transição suave (sem travar UI)
-            requestAnimationFrame(() => {
-                iniciarPainelAdmin();
-            });
+            console.log("🚪 Abrindo painel admin...");
+            setTimeout(() => {
+    iniciarPainelAdmin();
+}, 50);
 
         } else {
             alert("Credenciais inválidas.");
