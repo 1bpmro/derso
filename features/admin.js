@@ -367,34 +367,83 @@ function getBadge(score) {
 
 /* ====================================== */
 function renderizarTudo(lista) {
+
     const tbody = document.getElementById("adminTableBody");
 
     if (!Array.isArray(lista)) {
-        tbody.innerHTML = `<tr><td colspan="4">Erro ao carregar dados</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4">Erro ao carregar dados</td>
+            </tr>
+        `;
         return;
     }
 
-    document.getElementById("countTotal").textContent = lista.length;
+    const mesAtual = (new Date().getMonth() + 1)
+        .toString()
+        .padStart(2, "0");
 
-    const mesAtual = (new Date().getMonth() + 1).toString().padStart(2, '0');
+    // 🔥 filtra somente mês atual
+    const listaMes = lista.filter(item =>
+        item.data?.split("/")[1] === mesAtual
+    );
+
+    // 🔥 agrupa por matrícula
+    const agrupado = {};
+
+    listaMes.forEach(item => {
+
+        const mat = item.matricula;
+
+        if (!agrupado[mat]) {
+            agrupado[mat] = {
+                nome: item.nome,
+                matricula: mat,
+                datas: [],
+                total: 0
+            };
+        }
+
+        agrupado[mat].datas.push(item.data.split("/")[0]); // só dia
+        agrupado[mat].total++;
+    });
+
+    const resultado = Object.values(agrupado);
+
+    document.getElementById("countTotal").textContent = resultado.length;
 
     document.getElementById("countMes").textContent =
-        lista.filter(i => i.data?.split('/')[1] === mesAtual).length;
+        listaMes.length;
 
-    tbody.innerHTML = lista.map(item => {
+    tbody.innerHTML = resultado.map(item => {
+
         const score = STATE.scoreMap?.[item.matricula] || 0;
         const badge = getBadge(score);
 
         return `
         <tr>
             <td>
-                <div style="font-weight:700;">${item.nome}</div>
-                <div style="font-size:10px;">Mat: ${item.matricula}</div>
+                <div style="font-weight:700;">
+                    ${item.nome}
+                </div>
+
+                <div style="font-size:10px;">
+                    Mat: ${item.matricula}
+                </div>
             </td>
-            <td>${item.data}</td>
-            <td>${item.folga}</td>
-            <td><b>${score}</b> ${badge}</td>
+
+            <td>
+                <b>${item.total}x</b>
+                <div style="font-size:11px;color:#666;">
+                    ${item.datas.join(", ")}
+                </div>
+            </td>
+
+            <td>
+                <b>${score}</b> ${badge}
+            </td>
         </tr>
         `;
+
     }).join("");
 }
