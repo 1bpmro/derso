@@ -106,9 +106,14 @@ console.log("🔐 LOGIN:", dados);
 
             // 🔥 transição suave (sem travar UI)
             console.log("🚪 Abrindo painel admin...");
-            setTimeout(() => {
-    iniciarPainelAdmin();
-}, 50);
+         await new Promise(resolve => setTimeout(resolve, 150));
+
+console.log(
+    "🔐 TOKEN APÓS SALVAR:",
+    localStorage.getItem("adminToken")
+);
+
+await iniciarPainelAdmin();
 
         } else {
             alert("Credenciais inválidas.");
