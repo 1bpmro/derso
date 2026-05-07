@@ -68,9 +68,9 @@ script.onerror = () => {
 /* ====================================== */
 async function carregarDadosGlobais() {
     try {
-        const token = getToken();
+       const token = getToken();
 
-        console.log("🔑 TOKEN USADO:", token);
+console.log("🧪 TOKEN RECUPERADO:", token);
 
         const [dadosResp, eventosResp] = await Promise.all([
             fetch(`${CONFIG.API_URL}?action=readall&token=${token}`),
