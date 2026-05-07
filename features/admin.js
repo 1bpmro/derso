@@ -29,7 +29,156 @@ export async function iniciarPainelAdmin() {
 
         const container = document.getElementById("formContent");
 
-        container.innerHTML = `...`;
+      container.innerHTML = `
+<div class="admin-wrapper" style="padding:20px;">
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:20px;
+        gap:10px;
+        flex-wrap:wrap;
+    ">
+        <h2 style="margin:0;">🧠 Painel Administrativo</h2>
+
+        <button id="btnAdminExit" class="btn btn-outline">
+            🚪 SAIR
+        </button>
+    </div>
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+        gap:10px;
+        margin-bottom:20px;
+    ">
+        <div class="card">
+            <strong>Total</strong>
+            <div id="countTotal">0</div>
+        </div>
+
+        <div class="card">
+            <strong>Mês Atual</strong>
+            <div id="countMes">0</div>
+        </div>
+
+        <div class="card">
+            <strong>Push Enviados</strong>
+            <div id="countPush">0</div>
+        </div>
+
+        <div class="card">
+            <strong>Abertos</strong>
+            <div id="countAbertos">0</div>
+        </div>
+
+        <div class="card">
+            <strong>Ignorados</strong>
+            <div id="countIgnorados">0</div>
+        </div>
+
+        <div class="card">
+            <strong>Taxa</strong>
+            <div id="taxaResposta">0%</div>
+        </div>
+    </div>
+
+    <div style="
+        display:flex;
+        gap:10px;
+        margin-bottom:20px;
+        flex-wrap:wrap;
+    ">
+        <input
+            type="text"
+            id="adminSearch"
+            placeholder="Pesquisar..."
+            style="flex:1; min-width:200px;"
+        >
+
+        <select id="filterMes">
+            <option value="">Todos os meses</option>
+            <option value="01">Janeiro</option>
+            <option value="02">Fevereiro</option>
+            <option value="03">Março</option>
+            <option value="04">Abril</option>
+            <option value="05">Maio</option>
+            <option value="06">Junho</option>
+            <option value="07">Julho</option>
+            <option value="08">Agosto</option>
+            <option value="09">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+        </select>
+
+        <button id="btnExportCSV" class="btn btn-primary">
+            📤 EXPORTAR
+        </button>
+    </div>
+
+    <div style="
+        margin-bottom:20px;
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+    ">
+        <textarea
+            id="pushMensagem"
+            placeholder="Mensagem push..."
+            style="
+                flex:1;
+                min-height:80px;
+                padding:10px;
+                border-radius:8px;
+                border:1px solid #ccc;
+            "
+        ></textarea>
+
+        <button
+            id="btnEnviarPush"
+            class="btn btn-primary"
+            style="min-width:180px;"
+        >
+            📡 ENVIAR PUSH
+        </button>
+    </div>
+
+    <div style="
+        overflow:auto;
+        background:#fff;
+        border-radius:12px;
+        padding:10px;
+    ">
+        <table style="
+            width:100%;
+            border-collapse:collapse;
+        ">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="padding:10px;">Policial</th>
+                    <th style="padding:10px;">Data</th>
+                    <th style="padding:10px;">Folga</th>
+                    <th style="padding:10px;">Score</th>
+                </tr>
+            </thead>
+
+            <tbody id="adminTableBody"></tbody>
+        </table>
+    </div>
+
+    <div style="
+        margin-top:25px;
+        background:#fff;
+        border-radius:12px;
+        padding:20px;
+    ">
+        <canvas id="graficoAdmin"></canvas>
+    </div>
+
+</div>
+`;
 
         console.log("✅ HTML ADMIN INSERIDO");
 
@@ -130,7 +279,9 @@ console.log("🧪 TOKEN RECUPERADO:", token);
 
         calcularScore();
         renderizarTudo(dados);
-        inicializarGrafico(dados);
+        if (typeof inicializarGrafico === "function") {
+    inicializarGrafico(dados);
+}
 
         await carregarPushStats();
 
