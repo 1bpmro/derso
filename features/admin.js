@@ -6,25 +6,23 @@ import { registrarLog } from "../services/logger.js";
 
 const getToken = () => localStorage.getItem("adminToken");
 
-// Variável para a instância do Chart.js
-let instanciaGraficoAdmin = null;
+let graficoAdmin = null;
 
 /* ====================================== */
 export async function iniciarPainelAdmin() {
     try {
         console.log("🧠 Painel admin iniciado");
+
         window.__ADMIN_MODE__ = true;
 
         const token = getToken();
-        console.log("🧪 TOKEN:", token);
 
         if (!token) {
-            alert("Sessão inválida. Faça login novamente.");
+            alert("Sessão inválida.");
             location.reload();
             return;
         }
 
-        // Carrega o Chart.js se ainda não existir
         if (!window.Chart) {
             await carregarChartJS();
         }
@@ -32,110 +30,87 @@ export async function iniciarPainelAdmin() {
         const container = document.getElementById("formContent");
         if (!container) return;
 
-        // Injeção do HTML
-        container.innerHTML = `
+        container.innerHTML = gerarHTMLAdmin();
+
+        bindEventos();
+
+        await carregarDadosGlobais();
+
+    } catch (err) {
+        console.error("💥 ERRO ADMIN:", err);
+        registrarLog("ADMIN_ERRO", err.message, "ERRO");
+    }
+}
+
+/* ====================================== */
+function gerarHTMLAdmin() {
+    return `
 <div class="admin-wrapper" style="padding:20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:10px; flex-wrap:wrap;">
-        <h2 style="margin:0;">🧠 Painel Administrativo</h2>
-        <button id="btnAdminExit" class="btn btn-outline">🚪 SAIR</button>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2>🧠 Painel Administrativo</h2>
+        <button id="btnAdminExit">🚪 SAIR</button>
     </div>
 
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:20px;">
-        <div class="card"><strong>Total Policiais</strong><div id="countTotal">0</div></div>
-        <div class="card"><strong>Total Folgas</strong><div id="countMes">0</div></div>
-        <div class="card"><strong>Push Enviados</strong><div id="countPush">0</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px;">
+        <div class="card"><strong>Total</strong><div id="countTotal">0</div></div>
+        <div class="card"><strong>Mês</strong><div id="countMes">0</div></div>
+        <div class="card"><strong>Push</strong><div id="countPush">0</div></div>
         <div class="card"><strong>Abertos</strong><div id="countAbertos">0</div></div>
         <div class="card"><strong>Ignorados</strong><div id="countIgnorados">0</div></div>
         <div class="card"><strong>Taxa</strong><div id="taxaResposta">0%</div></div>
     </div>
 
-    <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-        <input type="text" id="adminSearch" placeholder="Pesquisar policial..." style="flex:1; min-width:200px;">
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <input id="adminSearch" placeholder="Pesquisar..." style="flex:1;">
         <select id="filterMes">
-            <option value="">Mês Atual</option>
-            <option value="01">Janeiro</option>
-            <option value="02">Fevereiro</option>
-            <option value="03">Março</option>
-            <option value="04">Abril</option>
-            <option value="05">Maio</option>
-            <option value="06">Junho</option>
-            <option value="07">Julho</option>
-            <option value="08">Agosto</option>
-            <option value="09">Setembro</option>
-            <option value="10">Outubro</option>
-            <option value="11">Novembro</option>
-            <option value="12">Dezembro</option>
+            <option value="">Mês atual</option>
+            ${Array.from({ length: 12 }, (_, i) =>
+                `<option value="${String(i + 1).padStart(2, "0")}">${i + 1}</option>`
+            ).join("")}
         </select>
-        <button id="btnAtualizar" class="btn btn-outline">🔄 Atualizar</button>
-        <button id="btnExportCSV" class="btn btn-primary">📤 EXPORTAR</button>
+        <button id="btnAtualizar">🔄</button>
+        <button id="btnExportCSV">📤</button>
     </div>
 
-    <div style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap;">
-        <textarea id="pushMensagem" placeholder="Mensagem push..." style="flex:1; min-height:80px; padding:10px; border-radius:8px; border:1px solid #ccc;"></textarea>
-        <button id="btnEnviarPush" class="btn btn-primary" style="min-width:180px;">📡 ENVIAR PUSH</button>
-    </div>
+    <textarea id="pushMensagem" placeholder="Push..." style="width:100%;margin-bottom:10px;"></textarea>
+    <button id="btnEnviarPush">📡 ENVIAR PUSH</button>
 
-    <div style="overflow:auto; background:#fff; border-radius:12px; padding:10px;">
-        <table style="width:100%; border-collapse:collapse;">
+    <div style="overflow:auto;background:#fff;padding:10px;margin-top:15px;">
+        <table width="100%">
             <thead>
-                <tr style="background:#f2f2f2;">
-                    <th style="padding:10px;">Policial</th>
-                    <th style="padding:10px;">Folgas</th>
-                    <th style="padding:10px;">Score</th>
-                </tr>
+                <tr><th>Policial</th><th>Folgas</th><th>Score</th></tr>
             </thead>
             <tbody id="adminTableBody"></tbody>
         </table>
     </div>
 
-    <div style="margin-top:25px; background:#fff; border-radius:12px; padding:20px;">
-        <canvas id="canvasGraficoAdmin"></canvas>
-    </div>
-</div>
-`;
+    <canvas id="canvasGraficoAdmin"></canvas>
+</div>`;
+}
 
-        console.log("✅ HTML ADMIN INSERIDO");
+/* ====================================== */
+function bindEventos() {
 
-        // Pequena pausa para garantir que o DOM renderizou os novos IDs
-        await new Promise(resolve => setTimeout(resolve, 50));
+    document.getElementById("btnAdminExit").onclick = () => location.reload();
+    document.getElementById("btnAtualizar").onclick = carregarDadosGlobais;
+    document.getElementById("btnExportCSV").onclick = exportarCSV;
+    document.getElementById("btnEnviarPush").onclick = enviarPushManual;
 
-        // Atribuição de eventos protegida
-        const ids = {
-            "btnAdminExit": () => { localStorage.removeItem("adminToken"); location.reload(); },
-            "btnAtualizar": carregarDadosGlobais,
-            "btnExportCSV": exportarCSV,
-            "btnEnviarPush": enviarPushManual
-        };
-
-        Object.entries(ids).forEach(([id, func]) => {
-            const el = document.getElementById(id);
-            if (el) el.onclick = func;
-        });
-
-        const searchInput = document.getElementById("adminSearch");
-        if (searchInput) searchInput.oninput = filtrarPainel;
-
-        const mesSelect = document.getElementById("filterMes");
-        if (mesSelect) mesSelect.onchange = carregarDadosGlobais;
-
-        // Carga inicial de dados
-        carregarDadosGlobais();
-
-    } catch (err) {
-        console.error("💥 ERRO iniciarPainelAdmin:", err);
-        alert("Erro ao iniciar painel admin");
-    }
+    document.getElementById("adminSearch").oninput = filtrarPainel;
+    document.getElementById("filterMes").onchange = carregarDadosGlobais;
 }
 
 /* ====================================== */
 function carregarChartJS() {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         if (window.Chart) return resolve();
-        const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        script.onload = () => { console.log("📊 Chart.js carregado"); resolve(); };
-        script.onerror = () => { console.error("❌ Falha Chart.js"); resolve(); };
-        document.head.appendChild(script);
+
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        s.onload = resolve;
+        s.onerror = resolve;
+        document.head.appendChild(s);
     });
 }
 
@@ -143,95 +118,41 @@ function carregarChartJS() {
 async function carregarDadosGlobais() {
     try {
         const token = getToken();
-        const mesSelecionado = document.getElementById("filterMes")?.value || String(new Date().getMonth() + 1).padStart(2, "0");
+        const mes = document.getElementById("filterMes")?.value ||
+            String(new Date().getMonth() + 1).padStart(2, "0");
 
         const [dadosResp, eventosResp] = await Promise.all([
-            fetch(`${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mesSelecionado}`),
+            fetch(`${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mes}`),
             fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`)
         ]);
 
         const dados = await dadosResp.json();
         const eventos = await eventosResp.json();
 
-        if (dados.error || eventos.error) throw new Error(dados.error || eventos.error);
-
         STATE.listaCompletaAdmin = Array.isArray(dados) ? dados : [];
         STATE.eventosPush = Array.isArray(eventos) ? eventos : [];
 
         calcularScore();
+
         renderizarTudo(STATE.listaCompletaAdmin);
         inicializarGrafico(STATE.listaCompletaAdmin);
         carregarPushStats();
 
     } catch (err) {
-        console.error("🔥 ERRO ADMIN:", err);
-        registrarLog("ADMIN_ERRO", err.message, "ERRO");
-    }
-}
-
-/* ====================================== */
-async function enviarPushManual() {
-    const msgEl = document.getElementById("pushMensagem");
-    const msg = msgEl?.value.trim();
-    const token = getToken();
-
-    if (!msg) return alert("Digite uma mensagem");
-
-    try {
-        const resp = await fetch(`${CONFIG.API_URL}?action=push_manual&mensagem=${encodeURIComponent(msg)}&token=${token}`);
-        const res = await resp.json();
-        if (res.error) throw new Error(res.error);
-
-        alert("Push enviado!");
-        msgEl.value = "";
-        carregarPushStats();
-    } catch (err) {
-        console.error("🔥 PUSH ERRO:", err);
-        alert("Erro ao enviar push");
-    }
-}
-
-/* ====================================== */
-async function carregarPushStats() {
-    try {
-        const token = getToken();
-        const resp = await fetch(`${CONFIG.API_URL}?action=push_stats&token=${token}`);
-        const stats = await resp.json();
-
-        const map = {
-            "countPush": stats.enviados,
-            "countAbertos": stats.abertos,
-            "countIgnorados": stats.ignorados,
-            "taxaResposta": `${stats.taxa || 0}%`
-        };
-
-        Object.entries(map).forEach(([id, val]) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val || 0;
-        });
-    } catch (err) {
-        console.error("🔥 STATS ERRO:", err);
+        console.error(err);
     }
 }
 
 /* ====================================== */
 function calcularScore() {
-    const eventos = STATE.eventosPush || [];
-    const scoreMap = {};
-    eventos.forEach(ev => {
-        if (!ev.matricula) return;
-        if (!scoreMap[ev.matricula]) scoreMap[ev.matricula] = 0;
-        if (ev.status === "ABERTO") scoreMap[ev.matricula] += 1;
-        if (ev.status === "IGNORADO") scoreMap[ev.matricula] -= 1;
+    const map = {};
+    (STATE.eventosPush || []).forEach(e => {
+        if (!e.matricula) return;
+        map[e.matricula] = map[e.matricula] || 0;
+        if (e.status === "ABERTO") map[e.matricula]++;
+        if (e.status === "IGNORADO") map[e.matricula]--;
     });
-    STATE.scoreMap = scoreMap;
-}
-
-/* ====================================== */
-function getBadge(score) {
-    if (score >= 3) return "🟢";
-    if (score >= 0) return "🟡";
-    return "🔴";
+    STATE.scoreMap = map;
 }
 
 /* ====================================== */
@@ -239,40 +160,28 @@ function renderizarTudo(lista) {
     const tbody = document.getElementById("adminTableBody");
     if (!tbody) return;
 
-    if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="3">Nenhum dado encontrado</td></tr>`;
-        return;
-    }
-
     const agrupado = {};
-    lista.forEach(item => {
-        const mat = item.matricula || "SEM_MATRICULA";
-        if (!agrupado[mat]) {
-            agrupado[mat] = { nome: item.nome || "SEM NOME", matricula: mat, datas: [], total: 0 };
-        }
-        agrupado[mat].datas.push(item.data || "-");
-        agrupado[mat].total++;
+
+    (lista || []).forEach(i => {
+        const m = i.matricula || "N/A";
+        agrupado[m] ||= { nome: i.nome, datas: [], total: 0 };
+        agrupado[m].datas.push(i.data);
+        agrupado[m].total++;
     });
 
-    const resultado = Object.values(agrupado);
-    document.getElementById("countTotal").textContent = resultado.length;
+    const res = Object.entries(agrupado);
+
+    document.getElementById("countTotal").textContent = res.length;
     document.getElementById("countMes").textContent = lista.length;
 
-    tbody.innerHTML = resultado.map(item => {
-        const score = STATE.scoreMap?.[item.matricula] || 0;
+    tbody.innerHTML = res.map(([mat, item]) => {
+        const score = STATE.scoreMap?.[mat] || 0;
+
         return `
 <tr>
-    <td style="padding:10px;border-bottom:1px solid #eee;">
-        <div style="font-weight:700;">${item.nome}</div>
-        <div style="font-size:11px;color:#777;">Mat: ${item.matricula}</div>
-    </td>
-    <td style="padding:10px;border-bottom:1px solid #eee;">
-        <b>${item.total}x</b>
-        <div style="font-size:11px;color:#666;margin-top:4px;">${item.datas.join(", ")}</div>
-    </td>
-    <td style="padding:10px;border-bottom:1px solid #eee;font-weight:700;">
-        ${score} ${getBadge(score)}
-    </td>
+<td>${item.nome}</td>
+<td>${item.total}</td>
+<td>${score}</td>
 </tr>`;
     }).join("");
 }
@@ -280,58 +189,65 @@ function renderizarTudo(lista) {
 /* ====================================== */
 function filtrarPainel() {
     const termo = document.getElementById("adminSearch")?.value.toLowerCase();
-    const filtrado = STATE.listaCompletaAdmin.filter(item => 
-        (item.nome || "").toLowerCase().includes(termo) || String(item.matricula).includes(termo)
+    const filtrado = STATE.listaCompletaAdmin.filter(i =>
+        (i.nome || "").toLowerCase().includes(termo) ||
+        String(i.matricula).includes(termo)
     );
     renderizarTudo(filtrado);
 }
 
 /* ====================================== */
-function exportarCSV() {
-    const lista = STATE.listaCompletaAdmin || [];
-    if (!lista.length) return alert("Sem dados");
+async function enviarPushManual() {
+    const msg = document.getElementById("pushMensagem").value;
+    if (!msg) return;
 
-    let csv = "\ufeffNome,Matrícula,Data\n";
-    lista.forEach(item => { csv += `"${item.nome}","${item.matricula}","${item.data}"\n`; });
+    const token = getToken();
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `escala_admin.csv`;
-    link.click();
+    await fetch(`${CONFIG.API_URL}?action=push_manual&mensagem=${encodeURIComponent(msg)}&token=${token}`);
+
+    document.getElementById("pushMensagem").value = "";
+}
+
+/* ====================================== */
+async function carregarPushStats() {
+    try {
+        const token = getToken();
+        const r = await fetch(`${CONFIG.API_URL}?action=push_stats&token=${token}`);
+        const s = await r.json();
+
+        document.getElementById("countPush").textContent = s.enviados || 0;
+        document.getElementById("countAbertos").textContent = s.abertos || 0;
+        document.getElementById("countIgnorados").textContent = s.ignorados || 0;
+        document.getElementById("taxaResposta").textContent = (s.taxa || 0) + "%";
+
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 /* ====================================== */
 function inicializarGrafico(lista) {
-    try {
-        const ctx = document.getElementById("canvasGraficoAdmin");
-        if (!ctx) return;
+    const ctx = document.getElementById("canvasGraficoAdmin");
+    if (!ctx) return;
 
-        const agrupado = {};
-        lista.forEach(item => {
-            const dia = item.data?.split("/")[0];
-            if (dia) agrupado[dia] = (agrupado[dia] || 0) + 1;
-        });
+    const map = {};
 
-        const labels = Object.keys(agrupado).sort((a,b) => a-b);
-        const valores = labels.map(l => agrupado[l]);
+    (lista || []).forEach(i => {
+        const d = i.data?.split("/")[0];
+        if (!d) return;
+        map[d] = (map[d] || 0) + 1;
+    });
 
-        if (instanciaGraficoAdmin) instanciaGraficoAdmin.destroy();
+    const labels = Object.keys(map).sort((a,b)=>a-b);
+    const values = labels.map(l => map[l]);
 
-        instanciaGraficoAdmin = new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels,
-                datasets: [{
-                    label: "Folgas por Dia",
-                    data: valores,
-                    backgroundColor: "#3b82f6",
-                    borderWidth: 0
-                }]
-            },
-            options: { responsive: true, scales: { y: { beginAtZero: true } } }
-        });
-    } catch (err) {
-        console.error("🔥 GRÁFICO ERRO:", err);
-    }
+    if (graficoAdmin) graficoAdmin.destroy();
+
+    graficoAdmin = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [{ data: values }]
+        }
+    });
 }
