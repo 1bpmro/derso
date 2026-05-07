@@ -108,7 +108,11 @@ export async function registrarDispositivo(matricula) {
     /* ================================
        🧠 SERVICE WORKER
     ================================ */
-    const registration = await registrarServiceWorker();
+    let registration = await navigator.serviceWorker.getRegistration();
+
+if (!registration) {
+  registration = await registrarServiceWorker();
+}
 
     /* ================================
        🔑 TOKEN FIREBASE
