@@ -1,294 +1,255 @@
-// features/admin.js
-
 import { STATE } from "../core/state.js";
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 
+const adminStore = {
+    listaOriginal: [],
+    eventosPush: [],
+    scoreMap: {},
+    grafico: null,
+    carregado: false,
+    processando: false
+};
+
 const getToken = () => localStorage.getItem("adminToken");
 
-let graficoAdmin = null;
-
-/* ====================================== */
+/**
+ * INIT
+ */
 export async function iniciarPainelAdmin() {
+    if (adminStore.carregado || adminStore.processando) return;
+
+    const container = document.getElementById("formContent");
+    if (!container) return;
+
     try {
-        console.log("🧠 Painel admin iniciado");
-        window.__ADMIN_MODE__ = true;
+        adminStore.processando = true;
 
-        const token = getToken();
-        if (!token) {
-            alert("Sessão inválida. Faça login novamente.");
-            location.reload();
-            return;
-        }
+        container.innerHTML = loadingHTML();
 
-        if (!window.Chart) {
-            await carregarChartJS();
-        }
+        await garantirChartJS();
 
-        const container = document.getElementById("formContent");
-        if (!container) return;
-
-        // Injeta o HTML estruturado
         container.innerHTML = gerarHTMLAdmin();
-
-        // Vincula os cliques aos elementos recém-criados
         bindEventos();
 
-        // Carrega os dados iniciais
-        await carregarDadosGlobais();
+        await carregarDados();
+
+        adminStore.carregado = true;
+        window.__ADMIN_MODE__ = true;
 
     } catch (err) {
-        console.error("💥 ERRO ADMIN:", err);
+        adminStore.carregado = false;
+        container.innerHTML = erroHTML(err.message);
         registrarLog("ADMIN_ERRO", err.message, "ERRO");
+    } finally {
+        adminStore.processando = false;
     }
 }
 
-/* ====================================== */
-function gerarHTMLAdmin() {
-    return `
-<div class="admin-wrapper" style="padding:20px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:10px;">
-        <h2 style="margin:0;">🧠 Painel Administrativo</h2>
-        <button id="btnAdminExit" class="btn btn-outline" style="width:auto;">🚪 SAIR</button>
-    </div>
+/**
+ * UI STATES
+ */
+const loadingHTML = () => `
+<div style="padding:50px;text-align:center;font-family:sans-serif;">
+    <div style="width:40px;height:40px;border:4px solid #eee;border-top:4px solid #3498db;border-radius:50%;margin:auto;animation:spin 1s linear infinite;"></div>
+    <p style="margin-top:15px;color:#666;">Sincronizando base...</p>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>`;
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px;">
-        <div class="card"><strong>Total</strong><div id="countTotal">0</div></div>
-        <div class="card"><strong>Folgas</strong><div id="countMes">0</div></div>
-        <div class="card"><strong>Push</strong><div id="countPush">0</div></div>
-        <div class="card"><strong>Abertos</strong><div id="countAbertos">0</div></div>
-        <div class="card"><strong>Ignorados</strong><div id="countIgnorados">0</div></div>
-        <div class="card"><strong>Taxa</strong><div id="taxaResposta">0%</div></div>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-        <input id="adminSearch" type="text" placeholder="Pesquisar policial..." style="flex:1;min-width:200px;padding:8px;border-radius:5px;border:1px solid #ccc;">
-        <select id="filterMes" style="padding:8px;border-radius:5px;">
-            <option value="">Mês atual</option>
-            ${Array.from({ length: 12 }, (_, i) => {
-                const m = String(i + 1).padStart(2, "0");
-                return `<option value="${m}">${m}</option>`;
-            }).join("")}
-        </select>
-        <button id="btnAtualizar" class="btn btn-outline" style="width:auto;">🔄</button>
-        <button id="btnExportCSV" class="btn btn-primary" style="width:auto;">📤 EXPORTAR</button>
-    </div>
-
-    <div style="margin-bottom:20px; border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #f9f9f9;">
-        <textarea id="pushMensagem" placeholder="Digite a mensagem para todos os policiais..." style="width:100%;min-height:60px;margin-bottom:10px;padding:10px;border-radius:5px;border:1px solid #ccc;"></textarea>
-        <button id="btnEnviarPush" class="btn btn-primary">📡 ENVIAR PUSH AGORA</button>
-    </div>
-
-    <div style="overflow:auto;background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-        <table width="100%" style="border-collapse:collapse;">
-            <thead>
-                <tr style="border-bottom:2px solid #eee; text-align:left;">
-                    <th style="padding:10px;">Policial</th>
-                    <th style="padding:10px; text-align:center;">Folgas</th>
-                    <th style="padding:10px; text-align:center;">Score</th>
-                </tr>
-            </thead>
-            <tbody id="adminTableBody"></tbody>
-        </table>
-    </div>
-
-    <div style="margin-top:20px; background:#fff; padding:15px; border-radius:8px;">
-        <canvas id="canvasGraficoAdmin"></canvas>
-    </div>
+const erroHTML = (msg) => `
+<div style="padding:20px;background:#f8d7da;color:#721c24;border-radius:8px;">
+    <h3>❌ Erro</h3>
+    <p>${msg}</p>
+    <button onclick="location.reload()">Recarregar</button>
 </div>`;
-}
 
-/* ====================================== */
-function bindEventos() {
-    const doc = (id) => document.getElementById(id);
+/**
+ * DATA
+ */
+async function carregarDados(retry = 0) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (doc("btnAdminExit")) doc("btnAdminExit").onclick = () => { localStorage.removeItem("adminToken"); location.reload(); };
-    if (doc("btnAtualizar")) doc("btnAtualizar").onclick = carregarDadosGlobais;
-    if (doc("btnExportCSV")) doc("btnExportCSV").onclick = exportarCSV;
-    if (doc("btnEnviarPush")) doc("btnEnviarPush").onclick = enviarPushManual;
-    
-    if (doc("adminSearch")) doc("adminSearch").oninput = filtrarPainel;
-    if (doc("filterMes")) doc("filterMes").onchange = carregarDadosGlobais;
-}
-
-/* ====================================== */
-function carregarChartJS() {
-    return new Promise(resolve => {
-        if (window.Chart) return resolve();
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        s.onload = resolve;
-        s.onerror = resolve;
-        document.head.appendChild(s);
-    });
-}
-
-/* ====================================== */
-async function carregarDadosGlobais() {
     try {
         const token = getToken();
-        const mes = document.getElementById("filterMes")?.value || String(new Date().getMonth() + 1).padStart(2, "0");
+        const mes = document.getElementById("mes")?.value;
 
-        const [dadosResp, eventosResp] = await Promise.all([
-            fetch(`${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mes}`),
-            fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`)
+        const [r1, r2] = await Promise.all([
+            fetch(`${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mes}`, { signal: controller.signal }),
+            fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`, { signal: controller.signal })
         ]);
 
-        const dados = await dadosResp.json();
-        const eventos = await eventosResp.json();
+        clearTimeout(timeout);
 
-        STATE.listaCompletaAdmin = Array.isArray(dados) ? dados : [];
-        STATE.eventosPush = Array.isArray(eventos) ? eventos : [];
+        if (!r1.ok || !r2.ok) throw new Error("HTTP ERROR");
 
-        calcularScore();
-        renderizarTudo(STATE.listaCompletaAdmin);
-        inicializarGrafico(STATE.listaCompletaAdmin);
-        carregarPushStats();
+        const d = await r1.json();
+        const e = await r2.json();
+
+        adminStore.listaOriginal = Array.isArray(d) ? d : [];
+        adminStore.eventosPush = Array.isArray(e) ? e : [];
+
+        processar();
 
     } catch (err) {
-        console.error("Erro ao carregar dados:", err);
+        clearTimeout(timeout);
+
+        if (err.name === "AbortError" && retry < 1) {
+            return carregarDados(retry + 1);
+        }
+
+        alert("Falha: " + err.message);
+        registrarLog("ADMIN_FETCH", err.message, "ERRO");
     }
 }
 
-/* ====================================== */
-function calcularScore() {
-    const map = {};
-    (STATE.eventosPush || []).forEach(e => {
-        if (!e.matricula) return;
-        map[e.matricula] = map[e.matricula] || 0;
-        if (e.status === "ABERTO") map[e.matricula]++;
-        if (e.status === "IGNORADO") map[e.matricula]--;
-    });
-    STATE.scoreMap = map;
+/**
+ * CORE
+ */
+function processar() {
+    calcularScore();
+    renderTabela(adminStore.listaOriginal);
+    renderChart(adminStore.listaOriginal);
+    updateKPIs();
 }
 
-/* ====================================== */
-function renderizarTudo(lista) {
-    const tbody = document.getElementById("adminTableBody");
+/**
+ * SCORE ENGINE
+ */
+function calcularScore() {
+    const map = {};
+
+    (adminStore.eventosPush || []).forEach(e => {
+        if (!e.matricula) return;
+
+        const status = String(e.status || "").toUpperCase();
+
+        map[e.matricula] ??= 0;
+
+        if (status === "ABERTO") map[e.matricula] += 1;
+        if (status === "IGNORADO") map[e.matricula] -= 0.5;
+    });
+
+    adminStore.scoreMap = map;
+}
+
+/**
+ * SAFE DATE PARSER
+ */
+function extrairDia(data) {
+    if (!data) return null;
+
+    if (data.includes("/")) return data.split("/")[0];
+    if (data.includes("-")) return data.split("-")[2];
+
+    return null;
+}
+
+/**
+ * TABLE
+ */
+function renderTabela(lista) {
+    const tbody = document.getElementById("table");
     if (!tbody) return;
 
     const agrupado = {};
-    (lista || []).forEach(i => {
-        const m = i.matricula || "N/A";
-        if (!agrupado[m]) agrupado[m] = { nome: i.nome, total: 0 };
+
+    lista.forEach(i => {
+        const m = i.matricula || "S/M";
+        agrupado[m] ??= { nome: (i.nome || "DESCONHECIDO"), total: 0 };
         agrupado[m].total++;
     });
 
-    const res = Object.entries(agrupado);
-    document.getElementById("countTotal").textContent = res.length;
-    document.getElementById("countMes").textContent = lista.length;
+    tbody.innerHTML = Object.entries(agrupado)
+        .sort((a,b)=>b[1].total-a[1].total)
+        .map(([m,v])=>{
+            const s = adminStore.scoreMap[m] ?? 0;
 
-    tbody.innerHTML = res.map(([mat, item]) => {
-        const score = STATE.scoreMap?.[mat] || 0;
-        const corScore = score > 0 ? "green" : (score < 0 ? "red" : "#777");
-        return `
-        <tr style="border-bottom:1px solid #eee;">
-            <td style="padding:10px;"><strong>${item.nome}</strong><br><small style="color:#999">${mat}</small></td>
-            <td style="padding:10px; text-align:center;">${item.total}</td>
-            <td style="padding:10px; text-align:center; color:${corScore}; font-weight:bold;">${score}</td>
-        </tr>`;
-    }).join("");
+            return `
+<tr>
+<td>${v.nome}<br><small>${m}</small></td>
+<td style="text-align:center">${v.total}</td>
+<td style="text-align:center;font-weight:bold">${s}</td>
+</tr>`;
+        }).join("");
 }
 
-/* ====================================== */
-function filtrarPainel() {
-    const termo = document.getElementById("adminSearch")?.value.toLowerCase();
-    const filtrado = STATE.listaCompletaAdmin.filter(i =>
-        (i.nome || "").toLowerCase().includes(termo) || String(i.matricula).includes(termo)
+/**
+ * FILTER
+ */
+function renderFiltrado() {
+    const t = (document.getElementById("search")?.value || "").toLowerCase();
+
+    renderTabela(
+        adminStore.listaOriginal.filter(i =>
+            (i.nome || "").toLowerCase().includes(t) ||
+            String(i.matricula || "").includes(t)
+        )
     );
-    renderizarTudo(filtrado);
 }
 
-/* ====================================== */
-function exportarCSV() {
-    try {
-        const lista = STATE.listaCompletaAdmin || [];
-        if (!lista.length) return alert("Nenhum dado disponível para exportar.");
+/**
+ * KPIs
+ */
+function updateKPIs() {
+    const total = adminStore.listaOriginal.length;
 
-        let csv = "\ufeffNome,Matricula,Data\n";
-        lista.forEach(i => {
-            csv += `"${i.nome}","${i.matricula}","${i.data}"\n`;
-        });
+    document.getElementById("kpiTotal").textContent =
+        new Set(adminStore.listaOriginal.map(i => i.matricula)).size;
 
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `relatorio_admin_${new Date().toISOString().slice(0,10)}.csv`;
-        a.click();
-        
-        registrarLog("ADMIN", "Exportou CSV da escala", "INFO");
-    } catch (err) {
-        console.error("Erro no CSV:", err);
-    }
+    document.getElementById("kpiFolgas").textContent = total;
+
+    const enviados = adminStore.eventosPush.length;
+    const abertos = adminStore.eventosPush.filter(e => e.status === "ABERTO").length;
+
+    document.getElementById("kpiPush").textContent = enviados;
+    document.getElementById("kpiTaxa").textContent =
+        enviados ? Math.round((abertos/enviados)*100) + "%" : "0%";
 }
 
-/* ====================================== */
-async function enviarPushManual() {
-    const msgInput = document.getElementById("pushMensagem");
-    const msg = msgInput.value.trim();
-    if (!msg) return alert("Digite uma mensagem!");
-
-    const token = getToken();
-    try {
-        const resp = await fetch(`${CONFIG.API_URL}?action=push_manual&mensagem=${encodeURIComponent(msg)}&token=${token}`);
-        const res = await resp.json();
-        
-        if (res.error) throw new Error(res.error);
-
-        alert("📡 Push enviado com sucesso!");
-        msgInput.value = "";
-        carregarPushStats();
-    } catch (err) {
-        alert("Erro ao enviar push.");
-    }
-}
-
-/* ====================================== */
-async function carregarPushStats() {
-    try {
-        const token = getToken();
-        const r = await fetch(`${CONFIG.API_URL}?action=push_stats&token=${token}`);
-        const s = await r.json();
-
-        document.getElementById("countPush").textContent = s.enviados || 0;
-        document.getElementById("countAbertos").textContent = s.abertos || 0;
-        document.getElementById("countIgnorados").textContent = s.ignorados || 0;
-        document.getElementById("taxaResposta").textContent = (s.taxa || 0) + "%";
-    } catch (e) {
-        console.error("Erro stats:", e);
-    }
-}
-
-/* ====================================== */
-function inicializarGrafico(lista) {
-    const ctx = document.getElementById("canvasGraficoAdmin");
-    if (!ctx) return;
+/**
+ * CHART
+ */
+function renderChart(lista) {
+    const canvas = document.getElementById("chart");
+    if (!canvas || !window.Chart) return;
 
     const map = {};
-    (lista || []).forEach(i => {
-        const d = i.data?.split("/")[0];
-        if (d) map[d] = (map[d] || 0) + 1;
+
+    lista.forEach(i => {
+        const dia = extrairDia(i.data);
+        if (dia) map[dia.padStart(2,"0")] = (map[dia] || 0) + 1;
     });
 
-    const labels = Object.keys(map).sort((a,b)=>a-b);
+    const labels = Object.keys(map).sort();
     const values = labels.map(l => map[l]);
 
-    if (graficoAdmin) graficoAdmin.destroy();
+    adminStore.grafico?.destroy();
 
-    graficoAdmin = new Chart(ctx, {
-        type: "bar",
-        data: {
+    adminStore.grafico = new Chart(canvas, {
+        type:"line",
+        data:{
             labels,
-            datasets: [{ 
-                label: "Folgas por Dia",
-                data: values, 
-                backgroundColor: "#2c3e50" 
+            datasets:[{
+                data:values,
+                borderColor:"#3498db",
+                fill:true
             }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } }
         }
+    });
+}
+
+/**
+ * CHART LIB
+ */
+async function garantirChartJS() {
+    if (window.Chart) return;
+
+    return new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        s.onload = res;
+        s.onerror = rej;
+        document.head.appendChild(s);
     });
 }
