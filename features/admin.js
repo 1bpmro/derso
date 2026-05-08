@@ -36,13 +36,9 @@ export async function iniciarPainelAdmin() {
 
         await garantirChartJS();
 
-        // Injeta a estrutura base do HTML
         container.innerHTML = gerarHTMLAdmin();
-        
-        // Ativa os escutadores de eventos (clicks, inputs)
         bindEventos();
 
-        // Carga inicial dos dados
         await carregarDados();
 
         adminStore.carregado = true;
@@ -88,6 +84,14 @@ function gerarHTMLAdmin() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2 style="margin:0;color:#2c3e50;">🧠 Painel de Gestão</h2>
         <button id="btnExit" style="background:#e74c3c;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;">Sair</button>
+    </div>
+
+    <div style="background:#f0f7ff; padding:15px; border-radius:8px; border:1px solid #3498db; margin-bottom:20px;">
+        <h3 style="margin-top:0; color:#2980b9; font-size:16px;">📢 Enviar Notificação Geral (Push)</h3>
+        <div style="display:flex; gap:10px;">
+            <input id="pushMsg" placeholder="Digite o aviso para todos os militares..." style="flex:1; padding:10px; border-radius:6px; border:1px solid #ddd;">
+            <button id="btnSendPush" style="background:#3498db; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">ENVIAR</button>
+        </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:15px;margin-bottom:25px;">
@@ -156,7 +160,6 @@ async function carregarDados(retry = 0) {
         ]);
 
         clearTimeout(timeout);
-
         if (!r1.ok || !r2.ok) throw new Error("Erro de resposta da API.");
 
         const d = await r1.json();
@@ -195,6 +198,49 @@ function calcularScore() {
 
 /**
  * =========================================================================
+ * FUNÇÃO ENVIAR PUSH
+ * =========================================================================
+ */
+async function enviarPushGlobal() {
+    const input = document.getElementById("pushMsg");
+    const msg = input?.value.trim();
+    if (!msg) return alert("Digite uma mensagem primeiro.");
+
+    const btn = document.getElementById("btnSendPush");
+    const originalText = btn.textContent;
+    
+    try {
+        btn.disabled = true;
+        btn.textContent = "ENVIANDO...";
+
+        const response = await fetch(`${CONFIG.API_URL}?action=enviar_push_admin`, {
+            method: "POST",
+            body: JSON.stringify({
+                token: getToken(),
+                mensagem: msg
+            })
+        });
+
+        const res = await response.json();
+
+        if (res.success) {
+            alert("🚀 Notificação enviada com sucesso para " + (res.count || "todos") + " dispositivos!");
+            input.value = "";
+            carregarDados(); // Atualiza KPIs de Push
+        } else {
+            throw new Error(res.error || "Erro desconhecido no servidor");
+        }
+
+    } catch (err) {
+        alert("❌ Erro ao enviar: " + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
+/**
+ * =========================================================================
  * INTERFACE E EVENTOS
  * =========================================================================
  */
@@ -211,6 +257,7 @@ function bindEventos() {
     $("export")?.addEventListener("click", exportCSV);
     $("search")?.addEventListener("input", renderFiltrado);
     $("mes")?.addEventListener("change", () => carregarDados());
+    $("btnSendPush")?.addEventListener("click", enviarPushGlobal);
 }
 
 function renderTabela(lista) {
@@ -220,8 +267,11 @@ function renderTabela(lista) {
     const agrupado = {};
     lista.forEach(i => {
         const m = i.matricula || "S/M";
-        agrupado[m] ??= { nome: (i.nome || "DESCONHECIDO"), total: 0 };
+        if (!agrupado[m]) {
+            agrupado[m] = { nome: (i.nome || "DESCONHECIDO"), total: 0, datas: [] };
+        }
         agrupado[m].total++;
+        if (i.data) agrupado[m].datas.push(i.data);
     });
 
     tbody.innerHTML = Object.entries(agrupado)
@@ -229,10 +279,17 @@ function renderTabela(lista) {
         .map(([m,v])=>{
             const s = adminStore.scoreMap[m] ?? 0;
             const corScore = s > 0 ? "#27ae60" : (s < 0 ? "#e74c3c" : "#7f8c8d");
+            // Ordena as datas para o hover ficar legível
+            const datasHover = v.datas.sort().join(" | ");
+            
             return `
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:12px;"><strong>${v.nome}</strong><br><small style="color:#999">${m}</small></td>
-                <td style="text-align:center;font-weight:bold;">${v.total}</td>
+                <td style="text-align:center; font-weight:bold;">
+                    <span title="Datas solicitadas: ${datasHover}" style="cursor:help; border-bottom:1px dotted #3498db; color:#3498db; padding:2px 5px;">
+                        ${v.total}
+                    </span>
+                </td>
                 <td style="text-align:center;font-weight:bold;color:${corScore}">${s}</td>
             </tr>`;
         }).join("");
