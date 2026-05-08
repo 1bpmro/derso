@@ -265,32 +265,50 @@ function renderTabela(lista) {
     if (!tbody) return;
 
     const agrupado = {};
+
+    // IMPORTANTE: Aqui percorremos TODOS os registros retornados
     lista.forEach(i => {
         const m = i.matricula || "S/M";
+        
         if (!agrupado[m]) {
-            agrupado[m] = { nome: (i.nome || "DESCONHECIDO"), total: 0, datas: [] };
+            agrupado[m] = { 
+                nome: (i.nome || "DESCONHECIDO"), 
+                total: 0, 
+                datas: [] 
+            };
         }
+        
+        // Incrementa o contador para cada vez que a matrícula aparece
         agrupado[m].total++;
-        if (i.data) agrupado[m].datas.push(i.data);
+        
+        // Adiciona a data ao array de datas (se houver data no registro)
+        if (i.data) {
+            agrupado[m].datas.push(i.data);
+        }
     });
 
     tbody.innerHTML = Object.entries(agrupado)
-        .sort((a,b)=>b[1].total - a[1].total)
-        .map(([m,v])=>{
+        .sort((a, b) => b[1].total - a[1].total) // Ordena por quem tem mais folgas
+        .map(([m, v]) => {
             const s = adminStore.scoreMap[m] ?? 0;
             const corScore = s > 0 ? "#27ae60" : (s < 0 ? "#e74c3c" : "#7f8c8d");
-            // Ordena as datas para o hover ficar legível
-            const datasHover = v.datas.sort().join(" | ");
             
+            // Limpa e ordena as datas para o hover
+            const datasOrdenadas = [...new Set(v.datas)].sort().join(" | ");
+
             return `
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:12px;"><strong>${v.nome}</strong><br><small style="color:#999">${m}</small></td>
+                <td style="padding:12px;">
+                    <strong>${v.nome}</strong><br>
+                    <small style="color:#999">${m}</small>
+                </td>
                 <td style="text-align:center; font-weight:bold;">
-                    <span title="Datas solicitadas: ${datasHover}" style="cursor:help; border-bottom:1px dotted #3498db; color:#3498db; padding:2px 5px;">
+                    <span title="Dias solicitados: ${datasOrdenadas}" 
+                          style="cursor:help; border-bottom:1px dotted #3498db; color:#3498db; padding:2px 5px; background:rgba(52,152,219,0.05); border-radius:4px;">
                         ${v.total}
                     </span>
                 </td>
-                <td style="text-align:center;font-weight:bold;color:${corScore}">${s}</td>
+                <td style="text-align:center; font-weight:bold; color:${corScore}">${s}</td>
             </tr>`;
         }).join("");
 }
