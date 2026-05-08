@@ -21,7 +21,7 @@ const getToken = () => localStorage.getItem("adminToken");
 
 /**
  * =========================================================================
- * INICIALIZAÇÃO E CONTROLE DE UI
+ * INICIALIZAÇÃO
  * =========================================================================
  */
 export async function iniciarPainelAdmin() {
@@ -55,7 +55,7 @@ export async function iniciarPainelAdmin() {
 
 /**
  * =========================================================================
- * COMPONENTES DE INTERFACE (HTML)
+ * UI - COMPONENTES
  * =========================================================================
  */
 function loadingHTML() {
@@ -68,12 +68,7 @@ function loadingHTML() {
 }
 
 function erroHTML(msg) {
-    return `
-    <div style="padding:20px;background:#f8d7da;color:#721c24;border-radius:8px;border:1px solid #f5c6cb;margin:10px;">
-        <h3>❌ Falha no Painel</h3>
-        <p>${msg}</p>
-        <button onclick="location.reload()" style="padding:8px 15px;cursor:pointer;">Tentar Novamente</button>
-    </div>`;
+    return `<div style="padding:20px;background:#f8d7da;color:#721c24;border-radius:8px;margin:10px;">❌ ${msg}</div>`;
 }
 
 function gerarHTMLAdmin() {
@@ -86,56 +81,59 @@ function gerarHTMLAdmin() {
         <button id="btnExit" style="background:#e74c3c;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;">Sair</button>
     </div>
 
-    <div style="background:#f0f7ff; padding:15px; border-radius:8px; border:1px solid #3498db; margin-bottom:20px;">
-        <h3 style="margin-top:0; color:#2980b9; font-size:16px;">📢 Enviar Notificação Geral (Push)</h3>
+    <div style="background:#fff; padding:20px; border-radius:12px; border:1px solid #e0e6ed; margin-bottom:20px; box-shadow:0 4px 6px rgba(0,0,0,0.02);">
+        <h3 style="margin:0 0 15px 0; color:#34495e; font-size:16px; display:flex; align-items:center; gap:8px;">
+            <span>📢 Notificação em Massa</span>
+        </h3>
         <div style="display:flex; gap:10px;">
-            <input id="pushMsg" placeholder="Digite o aviso para todos os militares..." style="flex:1; padding:10px; border-radius:6px; border:1px solid #ddd;">
-            <button id="btnSendPush" style="background:#3498db; color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">ENVIAR</button>
+            <input id="pushMsg" placeholder="Ex: A escala de Junho já está disponível para consulta..." 
+                   style="flex:1; padding:12px; border-radius:8px; border:1px solid #dcdfe6; outline:none;">
+            <button id="btnSendPush" style="background:#3498db; color:#fff; border:none; padding:0 25px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s;">ENVIAR DISPARO</button>
         </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:15px;margin-bottom:25px;">
         <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;">
-            <strong id="kpiTotal" style="font-size:24px;display:block;">0</strong><small style="color:#7f8c8d;">Efetivo</small>
+            <strong id="kpiTotal" style="font-size:24px;display:block;">0</strong><small style="color:#7f8c8d;">Militares</small>
+        </div>
+        <div id="kpiFolgasBox" style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;">
+            <strong id="kpiFolgas" style="font-size:24px;display:block;">0</strong><small style="color:#7f8c8d;">Total Folgas</small>
         </div>
         <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;">
-            <strong id="kpiFolgas" style="font-size:24px;display:block;">0</strong><small style="color:#7f8c8d;">Folgas</small>
+            <strong id="kpiPush" style="font-size:24px;display:block;">0</strong><small style="color:#7f8c8d;">Push Enviados</small>
         </div>
         <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;">
-            <strong id="kpiPush" style="font-size:24px;display:block;">0</strong><small style="color:#7f8c8d;">Push</small>
-        </div>
-        <div style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;">
-            <strong id="kpiTaxa" style="font-size:24px;display:block;color:#3498db;">0%</strong><small style="color:#7f8c8d;">Taxa</small>
+            <strong id="kpiTaxa" style="font-size:24px;display:block;color:#3498db;">0%</strong><small style="color:#7f8c8d;">Abertura</small>
         </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-        <input id="search" placeholder="🔍 Buscar..." style="flex:2;padding:10px;border-radius:6px;border:1px solid #ddd;min-width:200px;">
+        <input id="search" placeholder="🔍 Buscar por nome ou matrícula..." style="flex:2;padding:10px;border-radius:6px;border:1px solid #ddd;min-width:200px;">
         <select id="mes" style="padding:10px;border-radius:6px;border:1px solid #ddd;">
             ${Array.from({length:12},(_,i)=>{
                 const v = String(i+1).padStart(2,"0");
                 return `<option value="${v}" ${v===mesAtual?"selected":""}>Mês ${v}</option>`;
             }).join("")}
         </select>
-        <button id="refresh" style="padding:10px;cursor:pointer;border-radius:6px;border:1px solid #ddd;background:#fff;">🔄</button>
-        <button id="export" style="padding:10px;cursor:pointer;border-radius:6px;border:none;background:#27ae60;color:#fff;">📤 CSV</button>
+        <button id="refresh" style="padding:10px;cursor:pointer;border-radius:6px;border:1px solid #ddd;background:#fff;">🔄 Atualizar</button>
+        <button id="export" style="padding:10px;cursor:pointer;border-radius:6px;border:none;background:#27ae60;color:#fff;">📤 Exportar CSV</button>
     </div>
 
-    <div style="background:#fff;border-radius:8px;overflow-x:auto;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+    <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.05); border:1px solid #eee;">
         <table width="100%" style="border-collapse:collapse;">
             <thead style="background:#f8f9fa;">
-                <tr style="text-align:left;">
-                    <th style="padding:12px;border-bottom:2px solid #eee;">Nome / Matrícula</th>
-                    <th style="padding:12px;border-bottom:2px solid #eee;text-align:center;">Folgas</th>
-                    <th style="padding:12px;border-bottom:2px solid #eee;text-align:center;">Score</th>
+                <tr style="text-align:left; color:#7f8c8d; font-size:13px;">
+                    <th style="padding:15px;border-bottom:2px solid #eee;">NOME / MATRÍCULA</th>
+                    <th style="padding:15px;border-bottom:2px solid #eee;text-align:center;">FOLGAS</th>
+                    <th style="padding:15px;border-bottom:2px solid #eee;text-align:center;">SCORE</th>
                 </tr>
             </thead>
             <tbody id="table"></tbody>
         </table>
     </div>
 
-    <div style="margin-top:20px;background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
-        <canvas id="chart" style="max-height:300px;"></canvas>
+    <div style="margin-top:20px;background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);border:1px solid #eee;">
+        <canvas id="chart" style="max-height:280px;"></canvas>
     </div>
 </div>
 <style>@keyframes fadeIn {from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}</style>`;
@@ -143,27 +141,26 @@ function gerarHTMLAdmin() {
 
 /**
  * =========================================================================
- * DATA E LOGICA
+ * CORE - PROCESSAMENTO DE DADOS
  * =========================================================================
  */
-async function carregarDados(retry = 0) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
 
+
+async function carregarDados() {
     try {
         const token = getToken();
-        const mes = document.getElementById("mes")?.value || String(new Date().getMonth() + 1).padStart(2, "0");
+        const mes = document.getElementById("mes")?.value;
 
         const [r1, r2] = await Promise.all([
-            fetch(`${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mes}`, { signal: controller.signal }),
-            fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`, { signal: controller.signal })
+            fetch(`${CONFIG.API_URL}?action=readall_admin&token=${token}&mes=${mes}`),
+            fetch(`${CONFIG.API_URL}?action=push_eventos&token=${token}`)
         ]);
-
-        clearTimeout(timeout);
-        if (!r1.ok || !r2.ok) throw new Error("Erro de resposta da API.");
 
         const d = await r1.json();
         const e = await r2.json();
+
+        if (d?.error) throw new Error(d.error);
+        if (e?.error) console.warn(e.error);
 
         adminStore.listaOriginal = Array.isArray(d) ? d : [];
         adminStore.eventosPush = Array.isArray(e) ? e : [];
@@ -171,14 +168,14 @@ async function carregarDados(retry = 0) {
         processar();
 
     } catch (err) {
-        clearTimeout(timeout);
-        if (err.name === "AbortError" && retry < 1) return carregarDados(retry + 1);
-        alert("Falha ao sincronizar: " + err.message);
+        console.error(err);
+        alert("Erro ao carregar dados: " + err.message);
     }
 }
 
 function processar() {
     calcularScore();
+
     renderTabela(adminStore.listaOriginal);
     renderChart(adminStore.listaOriginal);
     updateKPIs();
@@ -198,179 +195,242 @@ function calcularScore() {
 
 /**
  * =========================================================================
- * FUNÇÃO ENVIAR PUSH
+ * FUNÇÕES DE AÇÃO (PUSH / EVENTOS)
  * =========================================================================
  */
-async function enviarPushGlobal() {
+async function dispararPushGlobal() {
+
     const input = document.getElementById("pushMsg");
-    const msg = input?.value.trim();
-    if (!msg) return alert("Digite uma mensagem primeiro.");
-
     const btn = document.getElementById("btnSendPush");
-    const originalText = btn.textContent;
-    
-    try {
-        btn.disabled = true;
-        btn.textContent = "ENVIANDO...";
 
-        const response = await fetch(`${CONFIG.API_URL}?action=enviar_push_admin`, {
-            method: "POST",
-            body: JSON.stringify({
-                token: getToken(),
-                mensagem: msg
-            })
+    if (!input || !btn) {
+        alert("Componentes do painel não encontrados.");
+        return;
+    }
+
+    const mensagem = input.value.trim();
+
+    if (!mensagem) {
+        alert("Digite a mensagem da notificação.");
+        input.focus();
+        return;
+    }
+
+    const token = getToken();
+
+    if (!token) {
+        alert("Sessão administrativa inválida.");
+        return;
+    }
+
+    const confirmar = confirm(
+        `Confirmar envio da notificação para todos os dispositivos registrados?`
+    );
+
+    if (!confirmar) return;
+
+    const originalText = btn.textContent;
+
+    try {
+
+        btn.disabled = true;
+        btn.textContent = "DISPARANDO...";
+        btn.style.opacity = "0.7";
+        btn.style.cursor = "wait";
+
+        const controller = new AbortController();
+
+        const timeout = setTimeout(() => {
+            controller.abort();
+        }, 30000);
+
+        const params = new URLSearchParams({
+            action: "push_manual",
+            token,
+            mensagem
         });
 
-        const res = await response.json();
+        const response = await fetch(
+            `${CONFIG.API_URL}?${params.toString()}`,
+            {
+                method: "GET",
+                signal: controller.signal,
+                cache: "no-store"
+            }
+        );
 
-        if (res.success) {
-            alert("🚀 Notificação enviada com sucesso para " + (res.count || "todos") + " dispositivos!");
-            input.value = "";
-            carregarDados(); // Atualiza KPIs de Push
-        } else {
-            throw new Error(res.error || "Erro desconhecido no servidor");
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
 
+        const data = await response.json();
+
+        if (!data || typeof data !== "object") {
+            throw new Error("Resposta inválida do servidor.");
+        }
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        if (!data.success) {
+            throw new Error(data.message || "Falha desconhecida.");
+        }
+
+        alert(
+            `🚀 Push enviado com sucesso!\n\nDispositivos alcançados: ${data.enviados || 0}`
+        );
+
+        input.value = "";
+
+        registrarLog?.(
+            "PUSH_MANUAL",
+            `Disparo global realizado (${data.enviados || 0} dispositivos)`,
+            "INFO"
+        );
+
     } catch (err) {
-        alert("❌ Erro ao enviar: " + err.message);
+
+        console.error("Erro dispararPushGlobal:", err);
+
+        if (err.name === "AbortError") {
+            alert("O servidor demorou para responder.");
+        } else {
+            alert("Erro ao enviar push: " + err.message);
+        }
+
     } finally {
+
         btn.disabled = false;
         btn.textContent = originalText;
+        btn.style.opacity = "1";
+        btn.style.cursor = "pointer";
     }
 }
 
-/**
- * =========================================================================
- * INTERFACE E EVENTOS
- * =========================================================================
- */
 function bindEventos() {
     const $ = (id) => document.getElementById(id);
-
     $("btnExit")?.addEventListener("click", () => {
         localStorage.removeItem("adminToken");
-        adminStore.carregado = false;
         location.reload();
     });
-
     $("refresh")?.addEventListener("click", () => carregarDados());
     $("export")?.addEventListener("click", exportCSV);
     $("search")?.addEventListener("input", renderFiltrado);
     $("mes")?.addEventListener("change", () => carregarDados());
-    $("btnSendPush")?.addEventListener("click", enviarPushGlobal);
-}
-
-function renderTabela(lista) {
-    const tbody = document.getElementById("table");
-    if (!tbody) return;
-
-    const agrupado = {};
-
-    // IMPORTANTE: Aqui percorremos TODOS os registros retornados
-    lista.forEach(i => {
-        const m = i.matricula || "S/M";
-        
-        if (!agrupado[m]) {
-            agrupado[m] = { 
-                nome: (i.nome || "DESCONHECIDO"), 
-                total: 0, 
-                datas: [] 
-            };
-        }
-        
-        // Incrementa o contador para cada vez que a matrícula aparece
-        agrupado[m].total++;
-        
-        // Adiciona a data ao array de datas (se houver data no registro)
-        if (i.data) {
-            agrupado[m].datas.push(i.data);
-        }
-    });
-
-    tbody.innerHTML = Object.entries(agrupado)
-        .sort((a, b) => b[1].total - a[1].total) // Ordena por quem tem mais folgas
-        .map(([m, v]) => {
-            const s = adminStore.scoreMap[m] ?? 0;
-            const corScore = s > 0 ? "#27ae60" : (s < 0 ? "#e74c3c" : "#7f8c8d");
-            
-            // Limpa e ordena as datas para o hover
-            const datasOrdenadas = [...new Set(v.datas)].sort().join(" | ");
-
-            return `
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:12px;">
-                    <strong>${v.nome}</strong><br>
-                    <small style="color:#999">${m}</small>
-                </td>
-                <td style="text-align:center; font-weight:bold;">
-                    <span title="Dias solicitados: ${datasOrdenadas}" 
-                          style="cursor:help; border-bottom:1px dotted #3498db; color:#3498db; padding:2px 5px; background:rgba(52,152,219,0.05); border-radius:4px;">
-                        ${v.total}
-                    </span>
-                </td>
-                <td style="text-align:center; font-weight:bold; color:${corScore}">${s}</td>
-            </tr>`;
-        }).join("");
-}
-
-function renderFiltrado() {
-    const t = (document.getElementById("search")?.value || "").toLowerCase();
-    renderTabela(
-        adminStore.listaOriginal.filter(i =>
-            (i.nome || "").toLowerCase().includes(t) ||
-            String(i.matricula || "").includes(t)
-        )
-    );
-}
-
-function updateKPIs() {
-    const totalFolgas = adminStore.listaOriginal.length;
-    const efetivoUnico = new Set(adminStore.listaOriginal.map(i => i.matricula)).size;
-    const enviados = adminStore.eventosPush.length;
-    const abertos = adminStore.eventosPush.filter(e => e.status === "ABERTO").length;
-
-    const ids = {
-        "kpiTotal": efetivoUnico,
-        "kpiFolgas": totalFolgas,
-        "kpiPush": enviados,
-        "kpiTaxa": enviados ? Math.round((abertos/enviados)*100) + "%" : "0%"
-    };
-
-    Object.entries(ids).forEach(([id, val]) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-    });
-}
-
-function exportCSV() {
-    if (!adminStore.listaOriginal.length) return alert("Sem dados.");
-    let csv = "\ufeffNome,Matrícula,Data\n";
-    adminStore.listaOriginal.forEach(i => {
-        const n = (i.nome || "").replace(/,/g, " ");
-        csv += `${n},${i.matricula},${i.data}\n`;
-    });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `escala_export_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    $("btnSendPush")?.addEventListener("click", dispararPushGlobal);
 }
 
 /**
  * =========================================================================
- * UTILITÁRIOS E LIBS EXTERNAS
+ * RENDERIZAÇÃO DA TABELA (COM CORREÇÃO DE AGRUPAMENTO)
  * =========================================================================
  */
+function renderTabela(lista) {
+    const tbody = document.getElementById("table");
+    if (!tbody) return;
+
+    tbody.innerHTML = lista.map(v => {
+
+        const s = adminStore.scoreMap[v.matricula] ?? 0;
+
+        const corScore =
+            s > 0 ? "#27ae60" :
+            s < 0 ? "#e74c3c" :
+            "#7f8c8d";
+
+        const listaDatas = (v.datas || []).join(" | ");
+
+        return `
+        <tr style="border-bottom:1px solid #f4f7f6;">
+            <td style="padding:15px;">
+                <div style="font-weight:bold;color:#2c3e50;">
+                    ${v.nome}
+                </div>
+                <div style="font-size:11px;color:#95a5a6;">
+                    ${v.matricula}
+                </div>
+            </td>
+
+            <td style="text-align:center;">
+                <span
+                    title="Datas: ${listaDatas}"
+                    style="
+                        cursor:help;
+                        background:#ebf5ff;
+                        color:#3498db;
+                        padding:4px 10px;
+                        border-radius:20px;
+                        font-weight:bold;
+                        font-size:14px;
+                        border:1px solid #d6eaff;
+                    ">
+                    ${v.total}
+                </span>
+            </td>
+
+            <td style="
+                text-align:center;
+                font-weight:bold;
+                color:${corScore};
+                font-size:15px;
+            ">
+                ${s}
+            </td>
+        </tr>`;
+    }).join("");
+}
+
+function renderFiltrado() {
+    const term = document.getElementById("search").value.toLowerCase();
+    const filtrados = adminStore.listaOriginal.filter(i => 
+        (i.nome || "").toLowerCase().includes(term) || 
+        String(i.matricula).includes(term)
+    );
+    renderTabela(filtrados);
+}
+
+/**
+ * =========================================================================
+ * UTILITÁRIOS (KPI, CHART, EXPORT)
+ * =========================================================================
+ */
+function updateKPIs() {
+    const totalFolgas = adminStore.listaOriginal.reduce(
+    (acc, item) => acc + (item.total || 0),
+    0
+);
+    const militaresUnicos = new Set(adminStore.listaOriginal.map(i => i.matricula)).size;
+    const enviados = adminStore.eventosPush.length;
+    const abertos = adminStore.eventosPush.filter(e => e.status === "ABERTO").length;
+
+    document.getElementById("kpiTotal").textContent = militaresUnicos;
+    document.getElementById("kpiFolgas").textContent = totalFolgas;
+    document.getElementById("kpiPush").textContent = enviados;
+    document.getElementById("kpiTaxa").textContent = enviados ? Math.round((abertos/enviados)*100) + "%" : "0%";
+}
+
+function exportCSV() {
+    if (!adminStore.listaOriginal.length) return;
+    let csv = "\ufeffMilitar,Matricula,Data\n";
+    adminStore.listaOriginal.forEach(i => {
+        csv += `"${i.nome}","${i.matricula}","${i.data}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `gestao_derso_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+}
+
 async function garantirChartJS() {
     if (window.Chart) return;
     return new Promise((res, rej) => {
         const s = document.createElement("script");
         s.src = "https://cdn.jsdelivr.net/npm/chart.js";
-        s.async = true;
-        s.onload = res;
-        s.onerror = rej;
+        s.onload = res; s.onerror = rej;
         document.head.appendChild(s);
     });
 }
@@ -380,42 +440,62 @@ function renderChart(lista) {
     if (!canvas || !window.Chart) return;
 
     const map = {};
+
     lista.forEach(i => {
-        const dia = extrairDia(i.data);
-        if (dia) {
-            const d = dia.padStart(2,"0");
-            map[d] = (map[d] || 0) + 1;
-        }
+        (i.datas || []).forEach(data => {
+            const dia = extrairDia(data);
+
+            if (dia) {
+                map[dia.padStart(2, "0")] =
+                    (map[dia.padStart(2, "0")] || 0) + 1;
+            }
+        });
     });
 
     const labels = Object.keys(map).sort();
     const values = labels.map(l => map[l]);
 
     adminStore.grafico?.destroy();
+
     adminStore.grafico = new Chart(canvas, {
         type: "line",
         data: {
             labels,
             datasets: [{
-                label: "Folgas",
+                label: "Volume de Pedidos",
                 data: values,
                 borderColor: "#3498db",
-                backgroundColor: "rgba(52, 152, 219, 0.1)",
+                backgroundColor: "rgba(52, 152, 219, 0.05)",
+                borderWidth: 3,
+                pointBackgroundColor: "#fff",
+                pointRadius: 4,
                 fill: true,
-                tension: 0.3
+                tension: 0.4
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            maintainAspectRatio: false
         }
     });
 }
 
 function extrairDia(data) {
     if (!data) return null;
-    if (data.includes("/")) return data.split("/")[0];
-    if (data.includes("-")) return data.split("-")[2];
+
+    if (typeof data === "string") {
+        if (data.includes("/")) {
+            return data.split("/")[0];
+        }
+
+        if (data.includes("-")) {
+            return data.split("-")[2];
+        }
+    }
+
+    if (data instanceof Date && !isNaN(data.getTime())) {
+        return String(data.getDate()).padStart(2, "0");
+    }
+
     return null;
 }
