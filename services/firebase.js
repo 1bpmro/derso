@@ -69,7 +69,10 @@ async function registrarServiceWorker() {
       ? "/derso/sw.js"
       : "/sw.js";
 
-    const registration = await navigator.serviceWorker.register(swPath);
+    const registration = await navigator.serviceWorker.register(
+  swPath,
+  { scope: "./" }
+);
 
     console.log("📡 SW REGISTRADO EM:", swPath);
     registrarLog("PUSH", "Service Worker registrado", "SUCESSO");
@@ -87,9 +90,17 @@ async function registrarServiceWorker() {
 /* 📡 REGISTRAR DISPOSITIVO */
 /* ====================================== */
 export async function registrarDispositivo(matricula) {
+
   try {
+
     if (!matricula) {
-      registrarLog("PUSH", "Matrícula não informada", "ERRO");
+
+      registrarLog(
+        "PUSH",
+        "Matrícula não informada",
+        "ERRO"
+      );
+
       return;
     }
 
@@ -98,50 +109,116 @@ export async function registrarDispositivo(matricula) {
     /* ================================
        🔔 PERMISSÃO
     ================================ */
-    const permitido = await solicitarPermissaoNotificacao();
+
+    const permitido =
+      await solicitarPermissaoNotificacao();
 
     if (!permitido) {
-      registrarLog("PUSH", "Permissão negada", "ERRO");
+
+      registrarLog(
+        "PUSH",
+        "Permissão negada",
+        "ERRO"
+      );
+
       return;
     }
 
     /* ================================
        🧠 SERVICE WORKER
     ================================ */
-    let registration = await navigator.serviceWorker.getRegistration();
 
-if (!registration) {
-  registration = await registrarServiceWorker();
-}
+    const swPath = location.hostname.includes("github.io")
+      ? "/derso/sw.js"
+      : "/sw.js";
+
+    let registration =
+      await navigator.serviceWorker.getRegistration(swPath);
+
+    if (!registration) {
+
+      registration =
+        await registrarServiceWorker();
+    }
 
     /* ================================
        🔑 TOKEN FIREBASE
     ================================ */
+
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration
     });
 
     if (!token) {
-      registrarLog("PUSH", "Token não gerado", "ERRO");
+
+      registrarLog(
+        "PUSH",
+        "Token não gerado",
+        "ERRO"
+      );
+
       console.warn("⚠️ Token veio vazio");
+
       return;
     }
 
     console.log("🔥 TOKEN FIREBASE:", token);
-    registrarLog("PUSH", "Token gerado", "SUCESSO");
+
+    registrarLog(
+      "PUSH",
+      "Token gerado",
+      "SUCESSO"
+    );
+
+    /* ================================
+       🚫 EVITA REENVIO DESNECESSÁRIO
+    ================================ */
+
+    const ultimoToken =
+      localStorage.getItem("firebase_token");
+
+    const ultimaMatricula =
+      localStorage.getItem("firebase_matricula");
+
+    if (
+      ultimoToken === token &&
+      ultimaMatricula === matricula
+    ) {
+
+      registrarLog(
+        "PUSH",
+        "Token já registrado anteriormente",
+        "INFO"
+      );
+
+      return;
+    }
 
     /* ================================
        📡 ENVIO PARA GAS
     ================================ */
+
     const resp = await fetch(CONFIG.API_URL, {
       method: "POST",
+
       body: new URLSearchParams({
         action: "salvar_token",
-        matricula: matricula,
-        token: token
+        matricula,
+        token
       })
     });
+
+    if (!resp.ok) {
+
+      registrarLog(
+        "PUSH",
+        `Erro HTTP ${resp.status}`,
+        "ERRO"
+      );
+
+      return;
+    }
 
     const text = await resp.text();
 
@@ -150,24 +227,56 @@ if (!registration) {
     let result;
 
     try {
+
       result = JSON.parse(text);
+
     } catch (e) {
-      registrarLog("PUSH", "Resposta inválida do servidor", "ERRO");
+
+      registrarLog(
+        "PUSH",
+        "Resposta inválida do servidor",
+        "ERRO"
+      );
+
       return;
     }
 
     if (result.success) {
-      registrarLog("PUSH", "Dispositivo registrado no servidor", "SUCESSO");
-    } else {
+
+      localStorage.setItem(
+        "firebase_token",
+        token
+      );
+
+      localStorage.setItem(
+        "firebase_matricula",
+        matricula
+      );
+
       registrarLog(
         "PUSH",
-        "Erro ao salvar: " + (result.message || "Erro desconhecido"),
+        "Dispositivo registrado no servidor",
+        "SUCESSO"
+      );
+
+    } else {
+
+      registrarLog(
+        "PUSH",
+        "Erro ao salvar: " +
+          (result.message || "Erro desconhecido"),
         "ERRO"
       );
     }
 
   } catch (error) {
+
     console.error("🔥 ERRO PUSH:", error);
-    registrarLog("PUSH", error.message, "ERRO");
+
+    registrarLog(
+      "PUSH",
+      error.message,
+      "ERRO"
+    );
   }
 }
