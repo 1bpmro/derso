@@ -1,122 +1,212 @@
 // handlers/submit.js
 
 import { DOM } from "../core/dom.js";
+
 import { CONFIG } from "../core/config.js";
+
 import { STATE } from "../core/state.js";
+
 import { registrarLog } from "../services/logger.js";
-import { updateProgress } from "../services/progress.js";
+
 import {
-    salvarRascunho,
     limparRascunho
 } from "../services/storage.js";
+
 import { UI } from "../ui/manager.js";
+
+/* ======================================
+   🚫 CONTROLE DE ENVIO
+====================================== */
+
+let envioEmAndamento = false;
+
+/* ======================================
+   🚀 SUBMIT PRINCIPAL
+====================================== */
 
 export async function handleSubmit(e) {
 
     e.preventDefault();
 
-    /* ======================================
-       🔒 NORMALIZA MATRÍCULA
-    ====================================== */
-    let matriculaLimpa = DOM.matricula.value
-        .trim()
-        .replace(/\D/g, '');
+    /* ================================
+       🚫 BLOQUEIO DUPLO CLIQUE
+    ================================ */
 
-    if (
-        matriculaLimpa &&
-        matriculaLimpa.length <= 6 &&
-        !matriculaLimpa.startsWith("1000")
-    ) {
-        matriculaLimpa = "1000" + matriculaLimpa;
-    }
-
-    DOM.matricula.value = matriculaLimpa;
-
-    // salva para bootstrap/push
-    localStorage.setItem(
-        "matricula_usuario",
-        matriculaLimpa
-    );
-
-    /* ======================================
-       🚫 ANTI-SPAM
-    ====================================== */
-    if (Date.now() - STATE.ultimoEnvio < 3000) {
+    if (envioEmAndamento) {
 
         registrarLog(
             "BLOQUEIO",
-            "Tentativa de envio muito rápida",
+            "Tentativa de envio simultâneo",
             "AVISO"
         );
 
         return;
     }
 
-    STATE.ultimoEnvio = Date.now();
+    /* ================================
+       🔒 NORMALIZA MATRÍCULA
+    ================================ */
 
-    const mLog = matriculaLimpa || "N/A";
+    let matriculaLimpa =
+        DOM.matricula?.value
+            .trim()
+            .replace(/\D/g, "");
+
+    if (
+        matriculaLimpa &&
+        matriculaLimpa.length <= 6 &&
+        !matriculaLimpa.startsWith("1000")
+    ) {
+        matriculaLimpa =
+            `1000${matriculaLimpa}`;
+    }
+
+    if (DOM.matricula) {
+        DOM.matricula.value =
+            matriculaLimpa;
+    }
+
+    /* ================================
+       💾 CACHE LOCAL
+    ================================ */
+
+    if (matriculaLimpa) {
+
+        localStorage.setItem(
+            "matricula_usuario",
+            matriculaLimpa
+        );
+    }
+
+    /* ================================
+       🚫 ANTI-SPAM
+    ================================ */
+
+    const agora = Date.now();
+
+    if (
+        agora - STATE.ultimoEnvio < 3000
+    ) {
+
+        registrarLog(
+            "BLOQUEIO",
+            "Tentativa muito rápida",
+            "AVISO"
+        );
+
+        UI.modal.show(
+            "AGUARDE",
+            "Espere alguns segundos antes de enviar novamente.",
+            "⏳",
+            "orange"
+        );
+
+        return;
+    }
+
+    const matriculaLog =
+        matriculaLimpa || "N/A";
 
     registrarLog(
         "ENVIO",
-        `Iniciando tentativa para matrícula: ${mLog}`
+        `Iniciando envio: ${matriculaLog}`,
+        "INFO"
     );
+
+    envioEmAndamento = true;
+
+    UI.feedback.lockForm();
+
+    UI.loading.show(
+        "ENVIANDO SOLICITAÇÃO..."
+    );
+
+    let timeout = null;
 
     try {
 
-        UI.feedback.lockForm();
-
-        UI.loading.show("ENVIANDO...");
-
-        /* ======================================
+        /* ================================
            📦 FORM DATA
-        ====================================== */
-        const formData = new URLSearchParams(
-            new FormData(DOM.form)
+        ================================ */
+
+        const formData =
+            new FormData(DOM.form);
+
+        // 🔥 garante matrícula normalizada
+        formData.set(
+            "matricula",
+            matriculaLimpa
         );
 
-        const controller = new AbortController();
+        const body =
+            new URLSearchParams(formData);
 
-        const timeout = setTimeout(
-            () => controller.abort(),
-            10000
+        /* ================================
+           ⏱️ TIMEOUT
+        ================================ */
+
+        const controller =
+            new AbortController();
+
+        timeout = setTimeout(() => {
+
+            controller.abort();
+
+        }, 10000);
+
+        /* ================================
+           📡 REQUEST
+        ================================ */
+
+        const response = await fetch(
+            CONFIG.API_URL,
+            {
+                method: "POST",
+                body,
+                signal: controller.signal
+            }
         );
 
-        const res = await fetch(CONFIG.API_URL, {
-            method: "POST",
-            body: formData,
-            signal: controller.signal
-        });
+        if (!response.ok) {
 
-        clearTimeout(timeout);
-
-        if (!res.ok) {
-            throw new Error(`Erro HTTP ${res.status}`);
+            throw new Error(
+                `Erro HTTP ${response.status}`
+            );
         }
 
-        let response;
+        /* ================================
+           📦 JSON
+        ================================ */
+
+        let result = null;
 
         try {
 
-            response = await res.json();
+            result =
+                await response.json();
 
         } catch {
 
             throw new Error(
-                "Resposta inválida do servidor"
+                "Servidor retornou resposta inválida"
             );
         }
 
-        /* ======================================
+        /* ================================
            ✅ SUCESSO
-        ====================================== */
+        ================================ */
+
         if (
-            response.success ||
-            response.result === "success"
+            result.success ||
+            result.result === "success"
         ) {
+
+            STATE.ultimoEnvio =
+                Date.now();
 
             registrarLog(
                 "SUCESSO",
-                `Solicitação de ${mLog} registrada`,
+                `Solicitação registrada: ${matriculaLog}`,
                 "SUCESSO"
             );
 
@@ -129,43 +219,59 @@ export async function handleSubmit(e) {
 
             limparFormulario();
 
-            UI.feedback.flash(DOM.form);
+            UI.feedback.flash(
+                DOM.form
+            );
 
             UI.feedback.scrollToTop();
 
-        } else {
-
-            tratarErroServidor(response);
-
+            return;
         }
 
-    } catch (err) {
+        /* ================================
+           ⚠️ ERRO NEGADO PELO SERVIDOR
+        ================================ */
+
+        tratarErroServidor(result);
+
+    } catch (error) {
+
+        console.error(error);
 
         registrarLog(
             "ERRO_CRITICO",
-            err.message,
+            error.message,
             "ERRO"
         );
 
-        UI.feedback.shake(DOM.form);
+        UI.feedback.shake(
+            DOM.form
+        );
+
+        const mensagem =
+            error.name === "AbortError"
+                ? "O servidor demorou para responder."
+                : "Não foi possível enviar sua solicitação.";
 
         UI.modal.show(
             "ERRO DE CONEXÃO",
-            err.name === "AbortError"
-                ? "O servidor demorou para responder. Tente novamente."
-                : "Não foi possível enviar sua solicitação. Verifique sua internet.",
+            `${mensagem}<br><br>Verifique sua internet e tente novamente.`,
             "📡",
             "red"
         );
 
     } finally {
 
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+
+        envioEmAndamento = false;
+
         UI.feedback.unlockForm();
 
         UI.loading.hide();
-
     }
-
 }
 
 /* ======================================
@@ -178,36 +284,56 @@ function limparFormulario() {
 
     DOM.form.reset();
 
-    updateProgress();
-
     limparRascunho();
+
+    UI.updateProgress();
 
     registrarLog(
         "FORM_RESET",
-        "Formulário limpo após envio"
+        "Formulário limpo",
+        "INFO"
     );
 }
 
 /* ======================================
-   ⚠️ TRATAR ERRO SERVIDOR
+   ⚠️ ERROS DO SERVIDOR
 ====================================== */
 
 function tratarErroServidor(response) {
 
+    const mensagem =
+        response?.message ||
+        "Falha desconhecida.";
+
     registrarLog(
         "ENVIO_NEGADO",
-        `Servidor recusou: ${response.message}`,
+        mensagem,
         "AVISO"
     );
 
-    if (
-        response.message?.includes("Já existe") ||
-        response.message?.toLowerCase().includes("duplicada")
-    ) {
+    const texto =
+        mensagem.toLowerCase();
+
+    /* ================================
+       🚫 DUPLICIDADE
+    ================================ */
+
+    const duplicado = [
+
+        "já existe",
+        "duplicada",
+        "duplicado",
+        "registro existente"
+
+    ].some(termo =>
+        texto.includes(termo)
+    );
+
+    if (duplicado) {
 
         UI.modal.show(
             "SOLICITAÇÃO DUPLICADA",
-            "Você já solicitou folga para esta data.",
+            "Já existe uma solicitação registrada para esta data.",
             "🚫",
             "orange"
         );
@@ -217,13 +343,18 @@ function tratarErroServidor(response) {
         return;
     }
 
+    /* ================================
+       ⚠️ ERRO GENÉRICO
+    ================================ */
+
     UI.modal.show(
         "AVISO",
-        response.message || "Falha desconhecida.",
+        mensagem,
         "⚠️",
         "orange"
     );
 
-    UI.feedback.shake(DOM.form);
-
+    UI.feedback.shake(
+        DOM.form
+    );
 }
