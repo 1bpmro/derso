@@ -1,20 +1,26 @@
+//core/dom.js
+
+function $(id) {
+    return document.getElementById(id);
+}
+
 export const DOM = {
-    form: document.getElementById('dersoForm'),
-    email: document.getElementById('email'),
-    matricula: document.getElementById('matricula'),
-    matriculaConsulta: document.getElementById('matriculaConsulta'),
-    nome: document.getElementById('nome'),
-    data: document.getElementById('data'),
-    btnEnviar: document.getElementById('btnEnviar'),
-    btnHistory: document.getElementById('btnHistory'),
-    btnHistoryFechado: document.getElementById('btnHistoryFechado'),
-    consultaFechada: document.getElementById('consultaFechada'),
-    timerDisplay: document.getElementById('timerDisplay'),
-    prazoBox: document.getElementById('prazoBox'),
-    modal: document.getElementById('modalMsg'),
-    historyContent: document.getElementById('historyContent'),
-    loading: document.getElementById('loadingScreen'),
-    formContent: document.getElementById('formContent'),
-    barra: document.getElementById('barraProgresso'),
-    footer: document.getElementById('footerText')
+    form: $("dersoForm"),
+    email: $("email"),
+    matricula: $("matricula"),
+    matriculaConsulta: $("matriculaConsulta"),
+    nome: $("nome"),
+    data: $("data"),
+    btnEnviar: $("btnEnviar"),
+    btnHistory: $("btnHistory"),
+    btnHistoryFechado: $("btnHistoryFechado"),
+    consultaFechada: $("consultaFechada"),
+    timerDisplay: $("timerDisplay"),
+    prazoBox: $("prazoBox"),
+    modal: $("modalMsg"),
+    historyContent: $("historyContent"),
+    loading: $("loadingScreen"),
+    formContent: $("formContent"),
+    barra: $("barraProgresso"),
+    footer: $("footerText")
 };
