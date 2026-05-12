@@ -793,103 +793,73 @@ function sairPainel() {
    📋 TABELA
 ====================================== */
 
-function renderTabela(lista = []) {
-
-    const tbody =
-        document.getElementById("table");
-
+function renderTabela(lista) {
+    const tbody = document.getElementById("table");
     if (!tbody) return;
 
-    if (!lista.length) {
+    tbody.innerHTML = lista.map(v => {
 
-        tbody.innerHTML = `
-        <tr>
-            <td
-                colspan="3"
-                style="
-                    padding:30px;
-                    text-align:center;
-                    color:#999;
-                "
-            >
-                Nenhum registro encontrado.
-            </td>
-        </tr>
-        `;
-
-        return;
-    }
-
-    tbody.innerHTML = lista.map((item) => {
-
-        const score =
-            adminStore.scoreMap[
-                item.matricula
-            ] ?? 0;
+        const s = adminStore.scoreMap[v.matricula] ?? 0;
 
         const corScore =
-            score > 0
-                ? "#27ae60"
-                : score < 0
-                    ? "#e74c3c"
-                    : "#7f8c8d";
+            s > 0 ? "#27ae60" :
+            s < 0 ? "#e74c3c" :
+            "#7f8c8d";
 
-        const listaDatas =
-            (item.datas || [])
-                .join(" | ");
+        const datas = Array.isArray(v.datas) ? v.datas : [];
+
+        const tooltipDatas = datas.length
+            ? datas.join(" • ")
+            : "Sem registros";
 
         return `
         <tr style="border-bottom:1px solid #f4f7f6;">
 
+            <!-- 👤 NOME / MATRÍCULA + HOVER -->
             <td style="padding:15px;">
-
-                <div style="
-                    font-weight:bold;
-                    color:#2c3e50;
-                ">
-                    ${item.nome || "-"}
+                <div style="font-weight:bold;color:#2c3e50;">
+                    ${v.nome}
                 </div>
 
-                <div style="
-                    font-size:11px;
-                    color:#95a5a6;
-                ">
-                    ${item.matricula || "-"}
+                <div style="font-size:11px;color:#95a5a6;">
+                    ${v.matricula}
                 </div>
-
             </td>
 
+            <!-- 📊 SOLICITAÇÕES -->
             <td style="text-align:center;">
-
                 <span
-                    title="${listaDatas}"
+                    title="${tooltipDatas}"
                     style="
-                        cursor:help;
-                        background:#ebf5ff;
-                        color:#3498db;
-                        padding:4px 10px;
-                        border-radius:20px;
-                        font-weight:bold;
-                        font-size:14px;
+                        cursor: help;
+                        display:inline-block;
+                        background: #eaf4ff;
+                        color:#1a73e8;
+                        padding:5px 12px;
+                        border-radius:999px;
+                        font-weight:700;
+                        font-size:13px;
                         border:1px solid #d6eaff;
+                        transition: all .2s ease;
                     "
+                    onmouseover="this.style.transform='scale(1.05)'"
+                    onmouseout="this.style.transform='scale(1)'"
                 >
-                    ${item.total || 0}
+                    ${v.total || 0}
                 </span>
-
             </td>
 
+            <!-- 🎯 SCORE -->
             <td style="
                 text-align:center;
                 font-weight:bold;
                 color:${corScore};
                 font-size:15px;
             ">
-                ${score}
+                ${s}
             </td>
 
-        </tr>
-        `;
+        </tr>`;
     }).join("");
 }
 
