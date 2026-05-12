@@ -6,37 +6,77 @@ import { STATE } from "../core/state.js";
 import { registrarLog } from "../services/logger.js";
 import { updateProgress } from "../services/progress.js";
 import { salvarRascunho } from "../services/storage.js";
-import { UI } from "../ui/manager.js"; 
-import { registrarDispositivo } from "../services/firebase.js";
+import { UI } from "../ui/manager.js";
 
 export async function handleSubmit(e) {
+
     e.preventDefault();
 
-    // 1. NORMALIZAÇÃO DE SEGURANÇA
-    let matriculaLimpa = DOM.matricula.value.trim().replace(/\D/g, '');
-    if (matriculaLimpa && matriculaLimpa.length <= 6 && !matriculaLimpa.startsWith("1000")) {
+    /* ======================================
+       🔒 NORMALIZA MATRÍCULA
+    ====================================== */
+    let matriculaLimpa = DOM.matricula.value
+        .trim()
+        .replace(/\D/g, '');
+
+    if (
+        matriculaLimpa &&
+        matriculaLimpa.length <= 6 &&
+        !matriculaLimpa.startsWith("1000")
+    ) {
         matriculaLimpa = "1000" + matriculaLimpa;
     }
-    DOM.matricula.value = matriculaLimpa; 
 
-    // 2. 🔒 Anti spam (3 segundos)
+    DOM.matricula.value = matriculaLimpa;
+
+    // salva para bootstrap/push
+    localStorage.setItem(
+        "matricula_usuario",
+        matriculaLimpa
+    );
+
+    /* ======================================
+       🚫 ANTI-SPAM
+    ====================================== */
     if (Date.now() - STATE.ultimoEnvio < 3000) {
-        registrarLog("BLOQUEIO", "Tentativa de envio muito rápida", "AVISO");
+
+        registrarLog(
+            "BLOQUEIO",
+            "Tentativa de envio muito rápida",
+            "AVISO"
+        );
+
         return;
     }
+
     STATE.ultimoEnvio = Date.now();
 
     const mLog = matriculaLimpa || "N/A";
-    registrarLog("ENVIO", `Iniciando tentativa para matrícula: ${mLog}`);
+
+    registrarLog(
+        "ENVIO",
+        `Iniciando tentativa para matrícula: ${mLog}`
+    );
 
     try {
-        UI.feedback.lockForm(); 
+
+        UI.feedback.lockForm();
+
         UI.loading.show("ENVIANDO...");
 
-        const formData = new URLSearchParams(new FormData(DOM.form));
+        /* ======================================
+           📦 FORM DATA
+        ====================================== */
+        const formData = new URLSearchParams(
+            new FormData(DOM.form)
+        );
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        const timeout = setTimeout(
+            () => controller.abort(),
+            10000
+        );
 
         const res = await fetch(CONFIG.API_URL, {
             method: "POST",
@@ -46,34 +86,36 @@ export async function handleSubmit(e) {
 
         clearTimeout(timeout);
 
-        if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+        if (!res.ok) {
+            throw new Error(`Erro HTTP ${res.status}`);
+        }
 
         let response;
+
         try {
+
             response = await res.json();
+
         } catch {
-            throw new Error("Resposta inválida do servidor");
+
+            throw new Error(
+                "Resposta inválida do servidor"
+            );
         }
 
         /* ======================================
            ✅ SUCESSO
         ====================================== */
-        if (response.success || response.result === "success") {
+        if (
+            response.success ||
+            response.result === "success"
+        ) {
 
-            registrarLog("SUCESSO", `Solicitação de ${mLog} registrada`, "SUCESSO");
-
-            // 🚀 REGISTRO INTELIGENTE DO PUSH (APENAS 1x POR MATRÍCULA)
-            const matricula = DOM.matricula.value;
-            const jaRegistrado = localStorage.getItem("push_registrado");
-
-            if (matricula && jaRegistrado !== matricula) {
-                try {
-                    await registrarDispositivo(matricula);
-                    localStorage.setItem("push_registrado", matricula);
-                } catch (err) {
-                    console.warn("⚠️ Falha ao registrar push (não crítico):", err);
-                }
-            }
+            registrarLog(
+                "SUCESSO",
+                `Solicitação de ${mLog} registrada`,
+                "SUCESSO"
+            );
 
             UI.modal.show(
                 "SUCESSO!",
@@ -83,16 +125,26 @@ export async function handleSubmit(e) {
             );
 
             limparFormulario();
-            UI.feedback.flash(DOM.form); 
+
+            UI.feedback.flash(DOM.form);
+
             UI.feedback.scrollToTop();
 
         } else {
+
             tratarErroServidor(response);
+
         }
 
     } catch (err) {
-        registrarLog("ERRO_CRITICO", err.message, "ERRO");
-        UI.feedback.shake(DOM.form); 
+
+        registrarLog(
+            "ERRO_CRITICO",
+            err.message,
+            "ERRO"
+        );
+
+        UI.feedback.shake(DOM.form);
 
         UI.modal.show(
             "ERRO DE CONEXÃO",
@@ -104,38 +156,62 @@ export async function handleSubmit(e) {
         );
 
     } finally {
-        UI.feedback.unlockForm(); 
+
+        UI.feedback.unlockForm();
+
         UI.loading.hide();
+
     }
+
 }
 
 /* ======================================
-   FUNÇÕES AUXILIARES
+   🧹 LIMPA FORMULÁRIO
 ====================================== */
 
 function limparFormulario() {
-    if (DOM.form) {
-        DOM.form.reset();
-        updateProgress(); 
-        salvarRascunho({}); 
-        registrarLog("FORM_RESET", "Formulário limpo após envio");
-    }
+
+    if (!DOM.form) return;
+
+    DOM.form.reset();
+
+    updateProgress();
+
+    salvarRascunho({});
+
+    registrarLog(
+        "FORM_RESET",
+        "Formulário limpo após envio"
+    );
+
 }
 
+/* ======================================
+   ⚠️ TRATAR ERRO SERVIDOR
+====================================== */
+
 function tratarErroServidor(response) {
-    registrarLog("ENVIO_NEGADO", `Servidor recusou: ${response.message}`, "AVISO");
+
+    registrarLog(
+        "ENVIO_NEGADO",
+        `Servidor recusou: ${response.message}`,
+        "AVISO"
+    );
 
     if (
         response.message?.includes("Já existe") ||
         response.message?.toLowerCase().includes("duplicada")
     ) {
+
         UI.modal.show(
             "SOLICITAÇÃO DUPLICADA",
             "Você já solicitou folga para esta data.",
             "🚫",
             "orange"
         );
+
         limparFormulario();
+
         return;
     }
 
@@ -147,4 +223,5 @@ function tratarErroServidor(response) {
     );
 
     UI.feedback.shake(DOM.form);
+
 }
