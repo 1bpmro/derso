@@ -1,23 +1,70 @@
 // services/progress.js
 
-// ✅ CORREÇÃO: Saindo de services (../) para buscar o dom.js dentro de core/
 import { DOM } from "../core/dom.js";
+
+/* ======================================
+   🎯 ATUALIZA BARRA DE PROGRESSO
+====================================== */
 
 export function updateProgress() {
 
-    if (!DOM?.email || !DOM?.nome || !DOM?.data || !DOM?.barra) return;
+    if (
+        !DOM?.email ||
+        !DOM?.nome ||
+        !DOM?.data ||
+        !DOM?.barra
+    ) {
+        return;
+    }
+
+    // 🔥 evita querySelector repetitivo
+    const folgaSelecionada =
+        document.querySelector(
+            'input[name="folga"]:checked'
+        );
 
     const validacoes = [
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(DOM.email.value.trim()), // Email válido
-        DOM.nome.value.trim().length > 3,                         // Nome preenchido
-        !!document.querySelector('input[name="folga"]:checked'),  // Tipo de folga selecionado
-        DOM.data.value.trim() !== ""                               // Data selecionada
+
+        /* ================================
+           📧 EMAIL VÁLIDO
+        ================================ */
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            .test(DOM.email.value.trim()),
+
+        /* ================================
+           👤 NOME
+        ================================ */
+        DOM.nome.value.trim().length > 3,
+
+        /* ================================
+           🛌 FOLGA
+        ================================ */
+        Boolean(folgaSelecionada),
+
+        /* ================================
+           📅 DATA
+        ================================ */
+        DOM.data.value.trim() !== ""
+
     ];
 
-    const total = validacoes.length;
-    const preenchidos = validacoes.filter(Boolean).length;
-    const perc = (preenchidos / total) * 100;
+    const preenchidos =
+        validacoes.filter(Boolean).length;
 
-    DOM.barra.style.width = perc + "%";
-    DOM.barra.classList.toggle("barra-completa", perc === 100);
+    const percentual =
+        Math.round(
+            (preenchidos / validacoes.length) * 100
+        );
+
+    /* ================================
+       🎨 UI
+    ================================ */
+
+    DOM.barra.style.width =
+        `${percentual}%`;
+
+    DOM.barra.classList.toggle(
+        "barra-completa",
+        percentual === 100
+    );
 }
