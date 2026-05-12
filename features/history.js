@@ -1,6 +1,5 @@
 // features/history.js
 
-// ✅ Importações corrigidas: voltando um nível (../)
 import { CONFIG } from "../core/config.js";
 import { DOM } from "../core/dom.js";
 import { registrarLog } from "../services/logger.js";
@@ -8,8 +7,10 @@ import { UI } from "../ui/manager.js";
 
 export async function fetchHistory(mat) {
 
-    if (!mat) {
-        registrarLog("PESQUISA", "Tentativa de consulta sem matrícula", "AVISO");
+    const matricula = (mat || "").trim();
+
+    if (!matricula) {
+        registrarLog("PESQUISA", "Consulta sem matrícula", "AVISO");
 
         return UI.modal.show(
             "AVISO",
@@ -19,21 +20,26 @@ export async function fetchHistory(mat) {
         );
     }
 
-    registrarLog("PESQUISA", `Buscando histórico para: ${mat}`, "INFO");
-
-    UI.modal.show(
-        "CONSULTANDO",
-        "Buscando seus registros...",
-        "⏳",
-        "#1A3C6E"
+    registrarLog(
+        "PESQUISA",
+        `Buscando histórico: ${matricula}`,
+        "INFO"
     );
 
+    UI.loading?.show?.("Buscando registros...");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     try {
-        const url = `${CONFIG.API_URL}?action=historico&matricula=${encodeURIComponent(mat)}`;
 
-        console.log("🌐 HISTÓRICO URL:", url);
+        const url = `${CONFIG.API_URL}?action=historico&matricula=${encodeURIComponent(matricula)}`;
 
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -41,46 +47,25 @@ export async function fetchHistory(mat) {
 
         const r = await response.json();
 
-        console.log("📦 HISTÓRICO RESPOSTA:", r);
-
-        // 🔥 tratamento de erro vindo da API
         if (r?.error) {
             throw new Error(r.error);
         }
 
-        const lista = Array.isArray(r?.dados) ? r.dados : [];
+        const lista = Array.isArray(r?.dados)
+            ? r.dados
+            : [];
 
-        if (lista.length > 0) {
-            registrarLog("PESQUISA", `${lista.length} registros encontrados`, "SUCESSO");
+        const nome = r?.nome || "REGISTROS";
 
-            if (DOM.historyContent) {
-                DOM.historyContent.innerHTML = lista
-                    .map(i => {
-                        const data = i?.data || "Sem data";
-                        const tipo = i?.folga || i?.tipo || "Registro";
+        if (lista.length === 0) {
 
-                        return `
-                            <div class="historico-item" style="padding: 8px; border-bottom: 1px solid #eee;">
-                                <span>📅 ${data}</span> - 
-                                <b>${tipo}</b>
-                            </div>
-                        `;
-                    })
-                    .join("");
-            }
-
-            UI.modal.show(
-                r?.nome || "REGISTROS",
-                `Encontrados ${lista.length} registro(s)`,
-                "📋",
-                "#1A3C6E",
-                true
+            registrarLog(
+                "PESQUISA",
+                `Sem registros: ${matricula}`,
+                "INFO"
             );
 
-        } else {
-            registrarLog("PESQUISA", `Nenhum registro para ${mat}`, "INFO");
-
-            UI.modal.show(
+            return UI.modal.show(
                 "NADA ENCONTRADO",
                 "Não há registros para esta matrícula.",
                 "🔎",
@@ -88,15 +73,71 @@ export async function fetchHistory(mat) {
             );
         }
 
+        registrarLog(
+            "PESQUISA",
+            `${lista.length} registros encontrados`,
+            "SUCESSO"
+        );
+
+        const html = buildHistoryHTML(lista);
+
+        UI.modal.show(
+            nome,
+            html,
+            "📋",
+            "#1A3C6E",
+            true
+        );
+
     } catch (e) {
+
         console.error("🔥 ERRO HISTÓRICO:", e);
-        registrarLog("PESQUISA_FALHA", e.message, "ERRO");
+
+        registrarLog(
+            "PESQUISA_FALHA",
+            e.message,
+            "ERRO"
+        );
 
         UI.modal.show(
             "ERRO",
-            "Falha ao buscar histórico.",
+            e.name === "AbortError"
+                ? "Tempo de resposta excedido."
+                : "Falha ao buscar histórico.",
             "❌",
             "red"
         );
+
+    } finally {
+        clearTimeout(timeout);
+        UI.loading?.hide?.();
     }
+}
+
+/* ======================================
+   🧱 BUILDER DE HTML (limpa UI do core)
+====================================== */
+function buildHistoryHTML(lista) {
+
+    return `
+        <div style="max-height: 320px; overflow-y: auto; padding-right: 6px;">
+            ${lista.map(i => {
+                const data = i?.data || "Sem data";
+                const tipo = i?.folga || i?.tipo || "Registro";
+
+                return `
+                    <div style="
+                        display:flex;
+                        justify-content:space-between;
+                        padding:10px 6px;
+                        border-bottom:1px solid #eee;
+                        font-size:0.95rem;
+                    ">
+                        <span>📅 ${data}</span>
+                        <b style="color:#1A3C6E">${tipo}</b>
+                    </div>
+                `;
+            }).join("")}
+        </div>
+    `;
 }
