@@ -1,214 +1,547 @@
 // handlers/events.js
 
-// 1. IMPORTAÇÕES
 import { DOM } from "../core/dom.js";
 import { CONFIG } from "../core/config.js";
 import { STATE } from "../core/state.js";
+
 import { registrarLog } from "../services/logger.js";
-import { updateProgress } from "../services/progress.js";
+
 import { handleSubmit } from "./submit.js";
+
 import { buscarHistorico } from "../core/api.js";
+
 import { UI } from "../ui/manager.js";
+
 import { applyInstitutionalTheme } from "../services/theme.js";
-import { registrarDispositivo } from "../services/firebase.js";
+
+/* ======================================
+   🧠 CONTROLE INTERNO
+====================================== */
+
+let eventosRegistrados = false;
+
+/* ======================================
+   🚀 SETUP PRINCIPAL
+====================================== */
 
 export function setupEvents() {
-    if (window.__ADMIN_MODE__) return;
 
-    if (!DOM.form) {
-        console.warn("Formulário não encontrado.");
+    if (window.__ADMIN_MODE__) {
         return;
     }
 
-    /* ======================================
-       GATILHO OCULTO - PAINEL ADMIN (5 CLIQUES)
-    ====================================== */
-    let cliquesFooter = 0;
-    let timerFooter;
+    if (eventosRegistrados) {
+        registrarLog(
+            "EVENTOS",
+            "Eventos já registrados",
+            "AVISO"
+        );
 
-    if (DOM.footer) {
-        DOM.footer.style.cursor = "pointer";
-        DOM.footer.addEventListener("click", () => {
-            cliquesFooter++;
-            clearTimeout(timerFooter);
-
-            if (cliquesFooter === 5) {
-                cliquesFooter = 0;
-                abrirPortaAdmin();
-                return;
-            }
-
-            timerFooter = setTimeout(() => { cliquesFooter = 0; }, 2000);
-        });
+        return;
     }
 
-    /* ======================================
-        EMAIL - AUTOCOMPLETE + VALIDAÇÃO
-    ====================================== */
-    DOM.email?.addEventListener("input", (e) => {
-        const val = e.target.value;
-        const datalist = document.getElementById("emailProviders");
+    if (!DOM.form) {
 
-        if (datalist) {
-            datalist.innerHTML = "";
-            if (val.includes("@")) {
-                const prefix = val.split("@")[0];
-                CONFIG.EMAIL_LIST.forEach(provider => {
-                    datalist.innerHTML += `<option value="${prefix}@${provider}">`;
-                });
-            }
-        }
+        console.warn(
+            "⚠️ Formulário não encontrado."
+        );
 
-        const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-        DOM.email.classList.toggle("valido", emailValido);
-        updateProgress();
-    });
+        return;
+    }
 
-    /* ======================================
-        MATRÍCULA - VALIDAÇÃO + PUSH + TEMA
-    ====================================== */
-    DOM.matricula?.addEventListener("blur", () => {
-        let val = DOM.matricula.value.trim().replace(/\D/g, '');
-        if (!val) return;
+    eventosRegistrados = true;
 
-        if (!val.startsWith("1000")) {
-            val = "1000" + val;
-        }
+    registrarLog(
+        "EVENTOS",
+        "Registrando eventos...",
+        "INFO"
+    );
 
-        DOM.matricula.value = val;
-        const erroEl = document.getElementById("erroMatricula");
+    setupAdminTrigger();
 
-        const militar = STATE.employeeList[val];
+    setupEmailValidation();
 
-        if (militar && militar.nome) {
-            DOM.nome.value = militar.nome;
+    setupMatriculaValidation();
 
-           if (erroEl) erroEl.style.display = "none";
-            registrarLog("VALIDACAO", `Militar: ${militar.nome}`, "SUCESSO");
-            applyInstitutionalTheme(val);
+    setupFormulario();
 
-        } else {
-            DOM.nome.value = "";
-            if (erroEl) erroEl.style.display = "block";
-            applyInstitutionalTheme();
-        }
+    setupHistorico();
 
-        updateProgress();
-    });
+    setupModal();
 
-    DOM.form.addEventListener("input", updateProgress);
-
-    DOM.btnHistory?.addEventListener("click", () => {
-        carregarHistorico(DOM.matricula?.value);
-    });
-
-    DOM.btnHistoryFechado?.addEventListener("click", () => {
-        carregarHistorico(DOM.matriculaConsulta?.value);
-    });
-
-    document.getElementById("btnCloseModal")?.addEventListener("click", () => {
-        UI.modal.hide();
-    });
-
-    DOM.form.addEventListener("submit", handleSubmit);
-
-    registrarLog("EVENTOS", "Eventos registrados com sucesso");
+    registrarLog(
+        "EVENTOS",
+        "Eventos registrados com sucesso",
+        "SUCESSO"
+    );
 }
 
 /* ======================================
-   FUNÇÕES DE ACESSO ADMINISTRATIVO
+   🛡️ GATILHO ADMIN
 ====================================== */
+
+function setupAdminTrigger() {
+
+    if (!DOM.footer) return;
+
+    let cliquesFooter = 0;
+
+    let timerFooter = null;
+
+    DOM.footer.style.cursor = "pointer";
+
+    DOM.footer.addEventListener("click", () => {
+
+        cliquesFooter++;
+
+        clearTimeout(timerFooter);
+
+        if (cliquesFooter >= 5) {
+
+            cliquesFooter = 0;
+
+            abrirPortaAdmin();
+
+            return;
+        }
+
+        timerFooter = setTimeout(() => {
+
+            cliquesFooter = 0;
+
+        }, 2000);
+    });
+}
+
+/* ======================================
+   📧 EMAIL
+====================================== */
+
+function setupEmailValidation() {
+
+    if (!DOM.email) return;
+
+    const datalist =
+        document.getElementById("emailProviders");
+
+    DOM.email.addEventListener("input", (e) => {
+
+        const valor =
+            e.target.value.trim();
+
+        atualizarSugestoesEmail(
+            valor,
+            datalist
+        );
+
+        validarEmail(valor);
+
+        UI.updateProgress();
+    });
+}
+
+function atualizarSugestoesEmail(
+    valor,
+    datalist
+) {
+
+    if (!datalist) return;
+
+    datalist.innerHTML = "";
+
+    if (!valor.includes("@")) {
+        return;
+    }
+
+    const prefixo =
+        valor.split("@")[0];
+
+    const fragment =
+        document.createDocumentFragment();
+
+    CONFIG.EMAIL_LIST.forEach(provider => {
+
+        const option =
+            document.createElement("option");
+
+        option.value =
+            `${prefixo}@${provider}`;
+
+        fragment.appendChild(option);
+    });
+
+    datalist.appendChild(fragment);
+}
+
+function validarEmail(valor) {
+
+    if (!DOM.email) return;
+
+    const valido =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            .test(valor);
+
+    DOM.email.classList.toggle(
+        "valido",
+        valido
+    );
+}
+
+/* ======================================
+   👮 MATRÍCULA
+====================================== */
+
+function setupMatriculaValidation() {
+
+    if (!DOM.matricula) return;
+
+    const erroEl =
+        document.getElementById(
+            "erroMatricula"
+        );
+
+    DOM.matricula.addEventListener(
+        "blur",
+        () => {
+
+            let valor =
+                DOM.matricula.value
+                    .trim()
+                    .replace(/\D/g, "");
+
+            if (!valor) return;
+
+            if (!valor.startsWith("1000")) {
+                valor = `1000${valor}`;
+            }
+
+            DOM.matricula.value = valor;
+
+            localStorage.setItem(
+                "matricula_usuario",
+                valor
+            );
+
+            const militar =
+                STATE.employeeList[valor];
+
+            if (militar?.nome) {
+
+                DOM.nome.value =
+                    militar.nome;
+
+                erroEl?.classList.add(
+                    "is-hidden"
+                );
+
+                registrarLog(
+                    "VALIDACAO",
+                    `Militar identificado: ${militar.nome}`,
+                    "SUCESSO"
+                );
+
+                applyInstitutionalTheme(
+                    valor
+                );
+
+            } else {
+
+                DOM.nome.value = "";
+
+                erroEl?.classList.remove(
+                    "is-hidden"
+                );
+
+                applyInstitutionalTheme();
+
+                registrarLog(
+                    "VALIDACAO",
+                    `Matrícula não encontrada: ${valor}`,
+                    "AVISO"
+                );
+            }
+
+            UI.updateProgress();
+        }
+    );
+}
+
+/* ======================================
+   📝 FORMULÁRIO
+====================================== */
+
+function setupFormulario() {
+
+    DOM.form.addEventListener(
+        "input",
+        UI.updateProgress
+    );
+
+    DOM.form.addEventListener(
+        "submit",
+        handleSubmit
+    );
+}
+
+/* ======================================
+   📜 HISTÓRICO
+====================================== */
+
+function setupHistorico() {
+
+    DOM.btnHistory?.addEventListener(
+        "click",
+        () => {
+
+            carregarHistorico(
+                DOM.matricula?.value
+            );
+        }
+    );
+
+    DOM.btnHistoryFechado?.addEventListener(
+        "click",
+        () => {
+
+            carregarHistorico(
+                DOM.matriculaConsulta?.value
+            );
+        }
+    );
+}
+
+/* ======================================
+   🪟 MODAL
+====================================== */
+
+function setupModal() {
+
+    document
+        .getElementById("btnCloseModal")
+        ?.addEventListener(
+            "click",
+            () => UI.modal.hide()
+        );
+}
+
+/* ======================================
+   🔐 ADMIN
+====================================== */
+
 async function abrirPortaAdmin() {
-    const login = prompt("🛡️ SISTEMA DERSO - ACESSO RESTRITO\nIdentifique-se:");
+
+    const login = prompt(
+        "🛡️ SISTEMA DERSO\n\nIdentifique-se:"
+    );
+
     if (!login) return;
 
-    const senha = prompt("Digite sua senha de acesso:");
+    const senha = prompt(
+        "Digite sua senha:"
+    );
+
     if (!senha) return;
 
-    UI.loading.show("Autenticando...");
+    UI.loading.show(
+        "Autenticando..."
+    );
 
     try {
-        const resp = await fetch(`${CONFIG.API_URL}?action=adminlogin&matricula=${login}&senha=${senha}`);
-        const result = await resp.json();
+
+        const url =
+            `${CONFIG.API_URL}?action=adminlogin` +
+            `&matricula=${encodeURIComponent(login)}` +
+            `&senha=${encodeURIComponent(senha)}`;
+
+        const resp = await fetch(url);
+
+        if (!resp.ok) {
+            throw new Error(
+                `Erro HTTP ${resp.status}`
+            );
+        }
+
+        const result =
+            await resp.json();
 
         if (result.autorizado) {
-            localStorage.setItem("adminToken", result.token);
-            registrarLog("ADMIN", `Acesso autorizado: ${result.nome}`, "SUCESSO");
 
-            const { iniciarPainelAdmin } = await import("../features/admin.js");
+            localStorage.setItem(
+                "adminToken",
+                result.token
+            );
+
+            registrarLog(
+                "ADMIN",
+                `Acesso autorizado: ${result.nome}`,
+                "SUCESSO"
+            );
+
+            const {
+                iniciarPainelAdmin
+            } = await import(
+                "../features/admin.js"
+            );
+
             await iniciarPainelAdmin();
+
         } else {
-            alert("Credenciais inválidas!");
-            registrarLog("SEGURANÇA", `Tentativa de login falhou para: ${login}`, "ERRO");
+
+            registrarLog(
+                "SEGURANÇA",
+                `Falha login admin: ${login}`,
+                "ERRO"
+            );
+
+            UI.modal.show(
+                "ACESSO NEGADO",
+                "Credenciais inválidas.",
+                "🚫",
+                "red"
+            );
         }
-    } catch (e) {
-        alert("Erro ao conectar com o servidor de autenticação.");
+
+    } catch (error) {
+
+        console.error(error);
+
+        registrarLog(
+            "ADMIN",
+            error.message,
+            "ERRO"
+        );
+
+        UI.modal.show(
+            "ERRO",
+            "Falha ao autenticar administrador.",
+            "📡",
+            "red"
+        );
+
     } finally {
+
         UI.loading.hide();
     }
 }
 
 /* ======================================
-    FUNÇÃO AUXILIAR - HISTÓRICO
+   📚 HISTÓRICO
 ====================================== */
-async function carregarHistorico(matriculaOriginal) {
+
+async function carregarHistorico(
+    matriculaOriginal
+) {
+
     if (!matriculaOriginal) {
-        UI.modal.show("AVISO", "Informe uma matrícula válida.", "⚠️", "orange");
+
+        UI.modal.show(
+            "AVISO",
+            "Informe uma matrícula válida.",
+            "⚠️",
+            "orange"
+        );
+
         return;
     }
 
-    let matricula = matriculaOriginal.trim();
-    if (matricula.length <= 6 && !matricula.startsWith("1000")) {
-        matricula = "1000" + matricula;
+    let matricula =
+        matriculaOriginal
+            .trim()
+            .replace(/\D/g, "");
+
+    if (
+        matricula.length <= 6 &&
+        !matricula.startsWith("1000")
+    ) {
+        matricula = `1000${matricula}`;
     }
 
-    const dadosMilitar = STATE.employeeList[matricula];
-    let nomeMilitar = "MILITAR NÃO IDENTIFICADO";
+    const dadosMilitar =
+        STATE.employeeList[matricula];
 
-    if (dadosMilitar) {
-        nomeMilitar = typeof dadosMilitar === "object"
-            ? (dadosMilitar.nome || dadosMilitar.NOME)
-            : dadosMilitar;
-    } else if (DOM.nome && DOM.nome.value) {
-        nomeMilitar = DOM.nome.value;
-    }
+    const nomeMilitar =
+        dadosMilitar?.nome ||
+        dadosMilitar?.NOME ||
+        DOM.nome?.value ||
+        "MILITAR NÃO IDENTIFICADO";
 
     try {
-        UI.loading.show("Buscando registros...");
 
-        const resultado = await buscarHistorico(matricula);
-        const listaFinal = Array.isArray(resultado)
-            ? resultado
-            : (resultado?.dados || []);
+        UI.loading.show(
+            "Buscando registros..."
+        );
+
+        const resultado =
+            await buscarHistorico(
+                matricula
+            );
+
+        const lista =
+            Array.isArray(resultado)
+                ? resultado
+                : resultado?.dados || [];
+
+        const registrosHTML =
+            lista.length > 0
+                ? lista.map(item => `
+                    <div class="historico-item">
+                        <span>
+                            📅 <b>${item.data}</b>
+                        </span>
+
+                        <span class="historico-tipo">
+                            ${item.tipo || item.folga || "48H"}
+                        </span>
+                    </div>
+                `).join("")
+                : `
+                    <p class="historico-vazio">
+                        Nenhum registro encontrado.
+                    </p>
+                `;
 
         const conteudoHTML = `
-            <div style="text-align: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-                <span style="display: block; color: #1a3c6e; font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">
-                    ${nomeMilitar}
-                </span>
+            <div class="historico-header">
+                ${nomeMilitar}
             </div>
-            <div style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
-                ${
-                    listaFinal.length > 0
-                        ? listaFinal.map(item => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding: 10px 5px; font-size: 0.95rem;">
-                                <span>📅 <b>${item.data}</b></span>
-                                <span style="color: #1a3c6e; font-weight: bold;">
-                                    ${item.tipo || item.folga || "48H"}
-                                </span>
-                            </div>
-                        `).join("")
-                        : `<p style="text-align:center; padding: 20px; color: #666;">Nenhum registro encontrado.</p>`
-                }
+
+            <div class="historico-lista">
+                ${registrosHTML}
             </div>
         `;
 
-        UI.modal.show("HISTÓRICO", conteudoHTML, "📜", "#1a3c6e", true);
-        registrarLog("HISTORICO", `Consulta realizada: ${matricula}`, "INFO");
+        UI.modal.show(
+            "HISTÓRICO",
+            conteudoHTML,
+            "📜",
+            "#1a3c6e"
+        );
 
-    } catch (err) {
-        UI.modal.show("ERRO", "Não foi possível carregar o histórico.", "❌", "red");
+        registrarLog(
+            "HISTORICO",
+            `Consulta realizada: ${matricula}`,
+            "INFO"
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        registrarLog(
+            "HISTORICO",
+            error.message,
+            "ERRO"
+        );
+
+        UI.modal.show(
+            "ERRO",
+            "Não foi possível carregar o histórico.",
+            "❌",
+            "red"
+        );
+
     } finally {
+
         UI.loading.hide();
     }
 }
