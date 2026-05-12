@@ -1,132 +1,242 @@
-//features/adminAccess.js
+// features/adminAccess.js
 
 import { iniciarPainelAdmin } from "./admin.js";
 import { CONFIG } from "../core/config.js";
 
+/* ======================================
+   🧠 ESTADO LOCAL
+====================================== */
+
 let contadorCliques = 0;
 let temporizador = null;
+let loginController = null;
+
+const DEBUG = false;
+
+/* ======================================
+   🚪 SETUP ACESSO ADMIN
+====================================== */
 
 export function configurarAcessoAdmin() {
-    const footer = document.getElementById("footerText");
+
+    const footer =
+        document.getElementById("footerText");
+
     if (!footer) return;
 
     footer.addEventListener("click", () => {
+
         contadorCliques++;
 
         clearTimeout(temporizador);
+
         temporizador = setTimeout(() => {
             contadorCliques = 0;
         }, 2000);
 
         if (contadorCliques >= 5) {
+
             contadorCliques = 0;
+
             abrirModalAdmin();
         }
     });
 
-    const btnLogin = document.getElementById("btnAdminLogin");
+    const btnLogin =
+        document.getElementById("btnAdminLogin");
 
-    btnLogin?.addEventListener("click", async () => {
-        if (btnLogin.disabled) return;
+    btnLogin?.addEventListener(
+        "click",
+        async () => {
 
-        btnLogin.disabled = true;
+            if (btnLogin.disabled) return;
 
-        try {
-            await validarAcessoAdmin();
-        } finally {
-            btnLogin.disabled = false;
+            btnLogin.disabled = true;
+
+            try {
+                await validarAcessoAdmin();
+            } finally {
+                btnLogin.disabled = false;
+            }
         }
-    });
+    );
 }
 
-/* ====================================== */
+/* ======================================
+   🪟 MODAL
+====================================== */
+
 function abrirModalAdmin() {
-    document.getElementById("adminLoginModal")?.classList.remove("is-hidden");
+
+    const modal =
+        document.getElementById("adminLoginModal");
+
+    modal?.classList.remove("is-hidden");
+
+    setTimeout(() => {
+        document
+            .getElementById("adminMatricula")
+            ?.focus();
+    }, 120);
 }
 
-/* ====================================== */
 function fecharModalAdmin() {
-    document.getElementById("adminLoginModal")?.classList.add("is-hidden");
+
+    const modal =
+        document.getElementById("adminLoginModal");
+
+    modal?.classList.add("is-hidden");
+
+    const input =
+        document.getElementById("adminMatricula");
+
+    if (input) input.value = "";
 }
 
-/* ====================================== */
+/* ======================================
+   🔐 LOGIN ADMIN
+====================================== */
+
 async function validarAcessoAdmin() {
-    const input = document.getElementById("adminMatricula");
-    const matricula = input?.value.trim();
+
+    const input =
+        document.getElementById("adminMatricula");
+
+    const matricula =
+        input?.value.trim();
 
     if (!matricula) {
+
         alert("Digite a matrícula");
+        input?.focus();
+
         return;
     }
 
-    const senha = prompt("Digite a senha administrativa:");
+    const senha =
+        prompt("Digite a senha administrativa:");
 
     if (!senha) {
+
         alert("Senha não informada");
         return;
     }
 
     try {
-        const url = `${CONFIG.API_URL}?action=adminlogin&matricula=${encodeURIComponent(matricula)}&senha=${encodeURIComponent(senha)}`;
 
-        console.log("🌐 URL LOGIN:", url);
+        /* ======================================
+           🧯 CANCELA REQUEST ANTERIOR
+        ====================================== */
 
-        // 🔥 Timeout inteligente
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        loginController?.abort();
 
-        const resp = await fetch(url, {
-            signal: controller.signal
-        });
+        loginController =
+            new AbortController();
+
+        const timeout = setTimeout(
+            () => loginController.abort(),
+            10000
+        );
+
+        /* ======================================
+           📡 REQUEST (POST seguro)
+        ====================================== */
+
+        const resp = await fetch(
+            CONFIG.API_URL,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body: JSON.stringify({
+                    action: "adminlogin",
+                    matricula,
+                    senha
+                }),
+                signal:
+                    loginController.signal
+            }
+        );
 
         clearTimeout(timeout);
 
         if (!resp.ok) {
-            throw new Error("Erro HTTP: " + resp.status);
+            throw new Error(
+                `Erro HTTP ${resp.status}`
+            );
         }
 
         const dados = await resp.json();
 
-console.log("🧪 DADOS LOGIN:", JSON.stringify(dados));
-console.log("🧪 TOKEN:", dados.token);
+        if (DEBUG) {
 
-console.log("🔐 LOGIN:", dados);
+            console.log("LOGIN RESPONSE:", dados);
+        }
 
-        if (dados.autorizado && dados.token) {
+        /* ======================================
+           🔐 VALIDAÇÃO
+        ====================================== */
 
-            // 🔥 limpeza segura
-            localStorage.removeItem("adminToken");
+        if (
+            dados?.autorizado &&
+            typeof dados.token === "string" &&
+            dados.token.length > 10
+        ) {
 
-            // 🔥 salva token padrão
-            localStorage.setItem("adminToken", dados.token);
+            localStorage.setItem(
+                "adminToken",
+                dados.token
+            );
 
-            console.log("✅ TOKEN SALVO:", dados.token);
+            if (DEBUG) {
+                console.log(
+                    "TOKEN SALVO:",
+                    dados.token
+                );
+            }
 
             fecharModalAdmin();
 
-            // 🔥 transição suave (sem travar UI)
-            console.log("🚪 Abrindo painel admin...");
-         await new Promise(resolve => setTimeout(resolve, 150));
+            await delay(150);
 
-console.log(
-    "🔐 TOKEN APÓS SALVAR:",
-    localStorage.getItem("adminToken")
-);
-
-await iniciarPainelAdmin();
+            await iniciarPainelAdmin();
 
         } else {
+
             alert("Credenciais inválidas.");
+
             input.value = "";
+            input.focus();
         }
 
     } catch (err) {
-        console.error("🔥 ERRO LOGIN:", err);
 
         if (err.name === "AbortError") {
-            alert("Servidor demorou para responder.");
+
+            alert(
+                "Servidor demorou para responder."
+            );
+
         } else {
-            alert("Erro ao conectar ao servidor de autenticação.");
+
+            console.error("LOGIN ERROR:", err);
+
+            alert(
+                "Erro ao conectar ao servidor."
+            );
         }
     }
+}
+
+/* ======================================
+   ⏳ HELPERS
+====================================== */
+
+function delay(ms) {
+
+    return new Promise(resolve =>
+        setTimeout(resolve, ms)
+    );
 }
