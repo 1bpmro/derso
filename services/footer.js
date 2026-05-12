@@ -17,5 +17,5 @@ export function updateFooter() {
     const ano = now.getFullYear();
 
     DOM.footer.textContent =
-        `Desenvolvido na 1ª Cia do 1º BPM pelo PVSA Pedro Porto - versão ${CONFIG.VERSAO} - em ${mes}/${ano}`;
+  `Desenvolvido na 1ª Cia do 1º BPM pelo PVSA Pedro Porto • versão ${versao} • ${mes}/${ano}`;
 }
