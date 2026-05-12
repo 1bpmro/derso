@@ -1,23 +1,73 @@
 // services/logger.js
 
-// ✅ Corrigido: saindo de services (../) para entrar em core
 import { STATE } from "../core/state.js";
 
-export function registrarLog(acao, detalhes, tipo = "INFO") {
-    const agora = new Date().toLocaleString("pt-BR");
-    
-    // Armazena no estado global para depuração futura se necessário
-    if (STATE && STATE.sessionLogs) {
-        STATE.sessionLogs.push({ data: agora, acao, detalhes, tipo });
-    }
+const MAX_LOGS = 300;
 
-    const cores = { 
-        INFO: "🔵", 
-        SUCESSO: "🟢", 
-        AVISO: "🟡", 
-        ERRO: "🔴",
-        SISTEMA: "⚙️" 
+export function registrarLog(
+    acao,
+    detalhes,
+    tipo = "INFO"
+) {
+
+    const agora = new Date();
+
+    const log = {
+        data: agora.toLocaleString("pt-BR"),
+        acao,
+        detalhes,
+        tipo
     };
 
-    console.log(`${cores[tipo] || "⚪"} [${agora}] ${acao}:`, detalhes);
+    /* ================================
+       💾 MEMÓRIA DE SESSÃO
+    ================================ */
+
+    if (STATE?.sessionLogs) {
+
+        STATE.sessionLogs.push(log);
+
+        // evita crescimento infinito
+        if (STATE.sessionLogs.length > MAX_LOGS) {
+            STATE.sessionLogs.shift();
+        }
+    }
+
+    /* ================================
+       🎨 ESTILO VISUAL
+    ================================ */
+
+    const cores = {
+        INFO: "🔵",
+        SUCESSO: "🟢",
+        AVISO: "🟡",
+        ERRO: "🔴",
+        SISTEMA: "⚙️"
+    };
+
+    const prefixo =
+        `${cores[tipo] || "⚪"} ` +
+        `[${log.data}] ${acao}:`;
+
+    /* ================================
+       🧠 CONSOLE ADEQUADO
+    ================================ */
+
+    switch (tipo) {
+
+        case "ERRO":
+            console.error(prefixo, detalhes);
+            break;
+
+        case "AVISO":
+            console.warn(prefixo, detalhes);
+            break;
+
+        case "SUCESSO":
+            console.info(prefixo, detalhes);
+            break;
+
+        default:
+            console.log(prefixo, detalhes);
+    }
 }
