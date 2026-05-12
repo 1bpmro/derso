@@ -1,7 +1,7 @@
 // services/prazo.js
 
 import { DOM } from "../core/dom.js";
-import { STATE } from "../core/state.js";
+import { STATE } from "../core/state.js"; 
 
 /* ======================================
    ⏱️ CONTROLE GLOBAL
