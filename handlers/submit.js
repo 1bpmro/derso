@@ -5,7 +5,10 @@ import { CONFIG } from "../core/config.js";
 import { STATE } from "../core/state.js";
 import { registrarLog } from "../services/logger.js";
 import { updateProgress } from "../services/progress.js";
-import { salvarRascunho } from "../services/storage.js";
+import {
+    salvarRascunho,
+    limparRascunho
+} from "../services/storage.js";
 import { UI } from "../ui/manager.js";
 
 export async function handleSubmit(e) {
@@ -177,13 +180,12 @@ function limparFormulario() {
 
     updateProgress();
 
-    salvarRascunho({});
+    limparRascunho();
 
     registrarLog(
         "FORM_RESET",
         "Formulário limpo após envio"
     );
-
 }
 
 /* ======================================
