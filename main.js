@@ -1,175 +1,413 @@
-// main.js - DERSO v7 (Com Score e Pressão Institucional)
+// main.js - DERSO v8 (Arquitetura Revisada e Blindada)
 
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
 import { DOM } from "./core/dom.js";
+
 import { UI } from "./ui/manager.js";
+
 import { registrarLog } from "./services/logger.js";
-import { applyInstitutionalTheme, applyDarkModeStyles } from "./services/theme.js";
+import {
+    applyInstitutionalTheme,
+    applyDarkModeStyles
+} from "./services/theme.js";
+
 import { monitorarPrazos } from "./services/prazo.js";
-import { setupEvents } from "./handlers/events.js";
 import { updateFooter } from "./services/footer.js";
-import { restaurarRascunho } from "./services/storage.js";
-import { configurarAcessoAdmin } from "./features/adminAccess.js";
+
+import {
+    restaurarRascunho
+} from "./services/storage.js";
+
 import { registrarDispositivo } from "./services/firebase.js";
+
+import { setupEvents } from "./handlers/events.js";
+
+import {
+    configurarAcessoAdmin
+} from "./features/adminAccess.js";
+
+/* ======================================
+   🌐 MODO GLOBAL
+====================================== */
 
 window.__ADMIN_MODE__ = false;
 
-// 🔥 expõe pra debug no console
-window.registrarDispositivo = registrarDispositivo;
+/* ======================================
+   🧪 DEBUG APENAS LOCALHOST
+====================================== */
 
-/* ====================================== */
-/* 🔔 LIMPEZA VISUAL */
-/* ====================================== */
+if (
+    location.hostname === "localhost" ||
+    location.hostname.includes("127.0.0.1")
+) {
+    window.registrarDispositivo =
+        registrarDispositivo;
+}
+
+/* ======================================
+   🔒 CONTROLE DE PUSH
+====================================== */
+
+let pushRegistrando = false;
+
+/* ======================================
+   🔔 LIMPEZA VISUAL
+====================================== */
+
 function limparAlertasVisuais() {
-    if ('clearAppBadge' in navigator) {
-        navigator.clearAppBadge().catch((err) => {
-            console.error('Erro ao limpar Badge:', err);
-        });
-    }
-}
 
-/* ====================================== */
-/* 📲 PWA CHECK */
-/* ====================================== */
-function verificarInstalacao() {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (!("clearAppBadge" in navigator)) return;
 
-    if (!isStandalone) {
-        setTimeout(() => {
-            UI.modal.show(
-                "INSTALAÇÃO RECOMENDADA",
-                "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos.",
-                isIOS ? "⎋" : "📲",
-                "#1a3c6e"
+    navigator.clearAppBadge()
+        .catch((err) => {
+
+            console.error(
+                "Erro ao limpar Badge:",
+                err
             );
-        }, 5000);
-    }
+        });
 }
 
-/* ====================================== */
-/* 🔔 PUSH */
-/* ====================================== */
+/* ======================================
+   📲 PWA CHECK
+====================================== */
+
+function verificarInstalacao() {
+
+    const isStandalone =
+        window.matchMedia(
+            "(display-mode: standalone)"
+        ).matches;
+
+    const isIOS =
+        /iPhone|iPad|iPod/.test(
+            navigator.userAgent
+        ) &&
+        !window.MSStream;
+
+    if (isStandalone) return;
+
+    setTimeout(() => {
+
+        UI.modal.show(
+            "INSTALAÇÃO RECOMENDADA",
+
+            "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos.",
+
+            isIOS ? "⎋" : "📲",
+
+            "#1a3c6e"
+        );
+
+    }, 5000);
+}
+
+/* ======================================
+   🔔 PUSH
+====================================== */
+
 async function pedirPermissaoNotificacao() {
-    if (!('Notification' in window)) return;
 
-    let matricula = localStorage.getItem("matricula_usuario");
+    if (pushRegistrando) return;
 
-    // 🔥 fallback: tenta capturar do input se não existir
+    let matricula =
+        localStorage.getItem(
+            "matricula_usuario"
+        );
+
+    /* ================================
+       FALLBACK INPUT
+    ================================ */
+
     if (!matricula) {
-        const input = document.getElementById("matricula");
-        matricula = input?.value?.trim();
+
+        matricula =
+            DOM.matricula?.value?.trim();
 
         if (matricula) {
-            localStorage.setItem("matricula_usuario", matricula);
+
+            localStorage.setItem(
+                "matricula_usuario",
+                matricula
+            );
         }
     }
 
+    /* ================================
+       SEM MATRÍCULA
+    ================================ */
+
     if (!matricula) {
-        console.warn("⚠️ Matrícula não encontrada. Push ignorado.");
+
+        console.warn(
+            "⚠️ Matrícula não encontrada."
+        );
+
         return;
     }
 
-    if (Notification.permission === 'granted') {
-        registrarDispositivo(matricula);
-        return;
-    }
+    /* ================================
+       REGISTRO PROTEGIDO
+    ================================ */
 
-    if (Notification.permission === 'denied') return;
+    pushRegistrando = true;
 
-    const permission = await Notification.requestPermission();
+    try {
 
-    if (permission === 'granted') {
-        registrarDispositivo(matricula);
+        await registrarDispositivo(
+            matricula
+        );
+
+    } catch (err) {
+
+        console.error(
+            "Erro ao registrar push:",
+            err
+        );
+
+    } finally {
+
+        pushRegistrando = false;
     }
 }
 
-/* ====================================== */
-/* 🚀 BOOTSTRAP */
-/* ====================================== */
+/* ======================================
+   ♻️ RESTAURA DRAFT
+====================================== */
+
+function restaurarCamposFormulario() {
+
+    const draft = restaurarRascunho();
+
+    if (!draft || !DOM.form) return;
+
+    Object.entries(draft)
+        .forEach(([key, value]) => {
+
+            const campo =
+                DOM.form.elements[key];
+
+            if (!campo) return;
+
+            /* ========================
+               RADIO
+            ======================== */
+
+            if (campo.type === "radio") {
+
+                const radio =
+                    DOM.form.querySelector(
+                        `input[name="${key}"][value="${value}"]`
+                    );
+
+                if (radio) {
+                    radio.checked = true;
+                }
+
+                return;
+            }
+
+            /* ========================
+               INPUT NORMAL
+            ======================== */
+
+            campo.value = value;
+        });
+
+    registrarLog(
+        "RASCUNHO",
+        "Rascunho restaurado",
+        "INFO"
+    );
+}
+
+/* ======================================
+   🚀 BOOTSTRAP
+====================================== */
+
 async function bootstrap() {
+
     limparAlertasVisuais();
 
-    registrarLog("SISTEMA", "Iniciando motor DERSO v7...", "INFO");
+    registrarLog(
+        "SISTEMA",
+        "Iniciando motor DERSO v8...",
+        "INFO"
+    );
 
-    if (!DOM.loading || !DOM.formContent) {
-        console.error("Falha Crítica: DOM incompleto.");
+    /* ================================
+       VALIDAÇÃO DOM
+    ================================ */
+
+    if (
+        !DOM.loading ||
+        !DOM.formContent
+    ) {
+
+        console.error(
+            "Falha Crítica: DOM incompleto."
+        );
+
         return;
     }
 
     try {
-        UI.loading.show("Sincronizando com o servidor...");
+
+        UI.loading.show(
+            "Sincronizando com o servidor..."
+        );
+
         applyDarkModeStyles();
 
-        registrarLog("SISTEMA", "Buscando dados institucionais e Score...");
+        registrarLog(
+            "SISTEMA",
+            "Buscando dados institucionais e score..."
+        );
 
-        const response = await fetch(`${CONFIG.API_URL}?action=get_initial_data`);
-        if (!response.ok) throw new Error("Erro ao conectar com o servidor.");
+        /* ================================
+           FETCH
+        ================================ */
 
-        const result = await response.json();
+        const response = await fetch(
+            `${CONFIG.API_URL}?action=get_initial_data`
+        );
 
-        STATE.employeeList = result.lista || {};
-        STATE.userScore = result.score || 0;
+        if (!response.ok) {
 
-        const dData = result.datas;
-
-        registrarLog("SISTEMA", `Dados carregados. Score: ${STATE.userScore}`, "SUCESSO");
-
-        if (dData?.abertura && dData?.fechamento) {
-            monitorarPrazos(dData.abertura, dData.fechamento);
+            throw new Error(
+                `Erro HTTP ${response.status}`
+            );
         }
 
+        /* ================================
+           JSON SAFE
+        ================================ */
+
+        let result;
+
+        try {
+
+            result = await response.json();
+
+        } catch {
+
+            throw new Error(
+                "Resposta inválida do servidor"
+            );
+        }
+
+        /* ================================
+           ESTADO GLOBAL
+        ================================ */
+
+        STATE.employeeList =
+            result.lista || {};
+
+        STATE.userScore =
+            result.score || 0;
+
+        registrarLog(
+            "SISTEMA",
+            `Dados carregados. Score: ${STATE.userScore}`,
+            "SUCESSO"
+        );
+
+        /* ================================
+           PRAZOS
+        ================================ */
+
+        const datas = result.datas;
+
+        if (
+            datas?.abertura &&
+            datas?.fechamento
+        ) {
+
+            monitorarPrazos(
+                datas.abertura,
+                datas.fechamento
+            );
+        }
+
+        /* ================================
+           UI
+        ================================ */
+
         applyInstitutionalTheme();
+
         updateFooter();
+
         setupEvents();
 
         configurarAcessoAdmin();
-        restaurarRascunho();
+
+        restaurarCamposFormulario();
 
         UI.loading.hide();
-        registrarLog("SISTEMA", "Operacional.", "SUCESSO");
+
+        registrarLog(
+            "SISTEMA",
+            "Operacional.",
+            "SUCESSO"
+        );
 
         verificarInstalacao();
 
-        /* ======================================
-           🔥 REGISTRO DE PUSH (ROBUSTO)
-        ====================================== */
-        let matricula = localStorage.getItem("matricula_usuario");
+        /* ================================
+           PUSH
+        ================================ */
 
-        // fallback extra
-        if (!matricula) {
-            const input = document.getElementById("matricula");
-            matricula = input?.value?.trim();
-
-            if (matricula) {
-                localStorage.setItem("matricula_usuario", matricula);
-            }
-        }
+        const matricula =
+            localStorage.getItem(
+                "matricula_usuario"
+            ) ||
+            DOM.matricula?.value?.trim();
 
         if (!matricula) {
-            console.warn("⚠️ Push não ativado (sem matrícula)");
+
+            console.warn(
+                "⚠️ Push não ativado (sem matrícula)"
+            );
+
             return;
         }
 
-        if (Notification.permission === 'default') {
-            setTimeout(pedirPermissaoNotificacao, 3000);
-        } else if (Notification.permission === 'granted') {
-            registrarDispositivo(matricula);
-        }
+        setTimeout(() => {
+
+            pedirPermissaoNotificacao();
+
+        }, 3000);
 
     } catch (error) {
-        registrarLog("FALHA_CRITICA", error.message, "ERRO");
+
+        registrarLog(
+            "FALHA_CRITICA",
+            error.message,
+            "ERRO"
+        );
+
+        console.error(error);
 
         UI.loading.hide();
 
         UI.modal.show(
             "ERRO DE CONEXÃO",
+
             "Não foi possível conectar ao banco de dados.",
+
             "📡",
+
             "red"
         );
     }
 }
 
-document.addEventListener("DOMContentLoaded", bootstrap);
+/* ======================================
+   🚀 START
+====================================== */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    bootstrap
+);
