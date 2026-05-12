@@ -1,3 +1,5 @@
+//core/config.js
+
 export const CONFIG = Object.freeze({
     API_URL: "https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec",
 
