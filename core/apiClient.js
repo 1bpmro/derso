@@ -1,16 +1,24 @@
+// core/apiClient.js
 import { CONFIG } from "./config.js";
 import { registrarLog } from "../services/logger.js";
 
 const DEFAULT_TIMEOUT = 10000;
+const POST_TIMEOUT = 15000;
 const MAX_RETRY = 2;
+const RETRY_DELAY_MS = 500;
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function request(url, options = {}, retry = 0) {
+    const isPost = options.method === "POST";
+    const timeout = isPost ? POST_TIMEOUT : DEFAULT_TIMEOUT;
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+    const timer = setTimeout(() => controller.abort(), timeout);
 
     try {
-
         const response = await fetch(url, {
             ...options,
             signal: controller.signal
@@ -21,29 +29,29 @@ async function request(url, options = {}, retry = 0) {
         }
 
         const text = await response.text();
-
         try {
             return JSON.parse(text);
         } catch {
             throw new Error("Resposta não é JSON válido");
         }
-
     } catch (err) {
-
         const isTimeout = err.name === "AbortError";
+        const isNetworkError = isTimeout || err.message === "Failed to fetch";
+        const isHttpError = err.message.startsWith("HTTP ");
 
         registrarLog(
             "API",
-            `Erro request: ${isTimeout ? "TIMEOUT" : err.message}`,
+            `Erro request (tentativa ${retry + 1}): ${isTimeout ? "TIMEOUT" : err.message}`,
             "ERRO"
         );
 
-        if (retry < MAX_RETRY) {
+        // Retry apenas para erros de rede/timeout, nunca para erros HTTP
+        if (!isHttpError && retry < MAX_RETRY) {
+            await sleep(RETRY_DELAY_MS * (retry + 1)); // backoff simples
             return request(url, options, retry + 1);
         }
 
         throw err;
-
     } finally {
         clearTimeout(timer);
     }
@@ -52,37 +60,24 @@ async function request(url, options = {}, retry = 0) {
 /* =========================
    GET
 ========================= */
-
 export function get(action, params = {}) {
-
-    const query = new URLSearchParams({
-        action,
-        ...params
-    });
-
+    const query = new URLSearchParams({ action, ...params });
     return request(`${CONFIG.API_URL}?${query.toString()}`);
 }
 
 /* =========================
    POST
 ========================= */
-
 export function post(action, body = {}) {
-
     const formData = new FormData();
     formData.append("action", action);
-
     Object.entries(body).forEach(([k, v]) => {
         formData.append(k, v);
     });
-
     return request(CONFIG.API_URL, {
         method: "POST",
         body: formData
     });
 }
 
-export const apiClient = {
-    get,
-    post
-};
+export const apiClient = { get, post };
