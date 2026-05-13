@@ -1,7 +1,7 @@
 // features/adminAccess.js
 
 import { iniciarPainelAdmin } from "./admin.js";
-import { CONFIG } from "../core/config.js";
+import { apiClient } from "../core/apiClient.js";
 
 /* ======================================
    🧠 ESTADO LOCAL
@@ -10,6 +10,7 @@ import { CONFIG } from "../core/config.js";
 let contadorCliques = 0;
 let temporizador = null;
 let loginController = null;
+let emLogin = false;
 
 const DEBUG = false;
 
@@ -19,9 +20,7 @@ const DEBUG = false;
 
 export function configurarAcessoAdmin() {
 
-    const footer =
-        document.getElementById("footerText");
-
+    const footer = document.getElementById("footerText");
     if (!footer) return;
 
     footer.addEventListener("click", () => {
@@ -35,31 +34,25 @@ export function configurarAcessoAdmin() {
         }, 2000);
 
         if (contadorCliques >= 5) {
-
             contadorCliques = 0;
-
             abrirModalAdmin();
         }
     });
 
-    const btnLogin =
-        document.getElementById("btnAdminLogin");
+    const btnLogin = document.getElementById("btnAdminLogin");
 
-    btnLogin?.addEventListener(
-        "click",
-        async () => {
+    btnLogin?.addEventListener("click", async () => {
 
-            if (btnLogin.disabled) return;
+        if (btnLogin.disabled || emLogin) return;
 
-            btnLogin.disabled = true;
+        btnLogin.disabled = true;
 
-            try {
-                await validarAcessoAdmin();
-            } finally {
-                btnLogin.disabled = false;
-            }
+        try {
+            await validarAcessoAdmin();
+        } finally {
+            btnLogin.disabled = false;
         }
-    );
+    });
 }
 
 /* ======================================
@@ -67,29 +60,19 @@ export function configurarAcessoAdmin() {
 ====================================== */
 
 function abrirModalAdmin() {
-
-    const modal =
-        document.getElementById("adminLoginModal");
-
+    const modal = document.getElementById("adminLoginModal");
     modal?.classList.remove("is-hidden");
 
     setTimeout(() => {
-        document
-            .getElementById("adminMatricula")
-            ?.focus();
+        document.getElementById("adminMatricula")?.focus();
     }, 120);
 }
 
 function fecharModalAdmin() {
-
-    const modal =
-        document.getElementById("adminLoginModal");
-
+    const modal = document.getElementById("adminLoginModal");
     modal?.classList.add("is-hidden");
 
-    const input =
-        document.getElementById("adminMatricula");
-
+    const input = document.getElementById("adminMatricula");
     if (input) input.value = "";
 }
 
@@ -99,85 +82,47 @@ function fecharModalAdmin() {
 
 async function validarAcessoAdmin() {
 
-    const input =
-        document.getElementById("adminMatricula");
+    if (emLogin) return;
+    emLogin = true;
 
-    const matricula =
-        input?.value.trim();
+    const input = document.getElementById("adminMatricula");
+    const matricula = input?.value?.trim();
 
     if (!matricula) {
-
         alert("Digite a matrícula");
         input?.focus();
-
+        emLogin = false;
         return;
     }
 
-    const senha =
-        prompt("Digite a senha administrativa:");
+    const senha = prompt("Digite a senha administrativa:");
 
     if (!senha) {
-
         alert("Senha não informada");
+        emLogin = false;
         return;
     }
 
     try {
-
-        /* ======================================
-           🧯 CANCELA REQUEST ANTERIOR
-        ====================================== */
-
         loginController?.abort();
+        loginController = new AbortController();
 
-        loginController =
-            new AbortController();
+        const timeout = setTimeout(() => {
+            loginController.abort();
+        }, 10000);
 
-        const timeout = setTimeout(
-            () => loginController.abort(),
-            10000
-        );
-
-        /* ======================================
-           📡 REQUEST (POST seguro)
-        ====================================== */
-
-        const resp = await fetch(
-            CONFIG.API_URL,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-                body: JSON.stringify({
-                    action: "adminlogin",
-                    matricula,
-                    senha
-                }),
-                signal:
-                    loginController.signal
-            }
-        );
+        const dados = await apiClient.post("adminlogin", {
+            matricula,
+            senha
+        }, {
+            signal: loginController.signal
+        });
 
         clearTimeout(timeout);
 
-        if (!resp.ok) {
-            throw new Error(
-                `Erro HTTP ${resp.status}`
-            );
-        }
-
-        const dados = await resp.json();
-
         if (DEBUG) {
-
             console.log("LOGIN RESPONSE:", dados);
         }
-
-        /* ======================================
-           🔐 VALIDAÇÃO
-        ====================================== */
 
         if (
             dados?.autorizado &&
@@ -185,28 +130,15 @@ async function validarAcessoAdmin() {
             dados.token.length > 10
         ) {
 
-            localStorage.setItem(
-                "adminToken",
-                dados.token
-            );
-
-            if (DEBUG) {
-                console.log(
-                    "TOKEN SALVO:",
-                    dados.token
-                );
-            }
+            localStorage.setItem("adminToken", dados.token);
 
             fecharModalAdmin();
 
             await delay(150);
-
             await iniciarPainelAdmin();
 
         } else {
-
             alert("Credenciais inválidas.");
-
             input.value = "";
             input.focus();
         }
@@ -214,19 +146,14 @@ async function validarAcessoAdmin() {
     } catch (err) {
 
         if (err.name === "AbortError") {
-
-            alert(
-                "Servidor demorou para responder."
-            );
-
+            alert("Servidor demorou para responder.");
         } else {
-
             console.error("LOGIN ERROR:", err);
-
-            alert(
-                "Erro ao conectar ao servidor."
-            );
+            alert("Erro ao conectar ao servidor.");
         }
+
+    } finally {
+        emLogin = false;
     }
 }
 
@@ -235,8 +162,5 @@ async function validarAcessoAdmin() {
 ====================================== */
 
 function delay(ms) {
-
-    return new Promise(resolve =>
-        setTimeout(resolve, ms)
-    );
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
