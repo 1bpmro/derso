@@ -3,21 +3,15 @@
 import { iniciarPainelAdmin } from "./admin.js";
 import { apiClient } from "../core/apiClient.js";
 
-/* ======================================
-   🧠 ESTADO LOCAL
-====================================== */
-
 let contadorCliques = 0;
 let temporizador = null;
-let loginController = null;
 let emLogin = false;
 let listenersAtivos = false;
 
 const DEBUG = false;
 
-/* ======================================
-   🚪 SETUP ACESSO ADMIN
-====================================== */
+// 🔐 janela de acesso ao admin (60s)
+const ADMIN_KEY = "ADMIN_UNLOCK";
 
 export function configurarAcessoAdmin() {
 
@@ -25,24 +19,26 @@ export function configurarAcessoAdmin() {
     listenersAtivos = true;
 
     const footer = document.getElementById("footerText");
-    if (footer) {
 
-        footer.addEventListener("click", () => {
+    footer?.addEventListener("click", () => {
 
-            contadorCliques++;
+        contadorCliques++;
 
-            clearTimeout(temporizador);
+        clearTimeout(temporizador);
 
-            temporizador = setTimeout(() => {
-                contadorCliques = 0;
-            }, 2000);
+        temporizador = setTimeout(() => {
+            contadorCliques = 0;
+        }, 2000);
 
-            if (contadorCliques >= 5) {
-                contadorCliques = 0;
-                abrirModalAdmin();
-            }
-        });
-    }
+        if (contadorCliques >= 5) {
+            contadorCliques = 0;
+
+            // 🔑 libera acesso temporário
+            localStorage.setItem(ADMIN_KEY, String(Date.now() + 60000));
+
+            abrirAdmin();
+        }
+    });
 
     const btnLogin = document.getElementById("btnAdminLogin");
 
@@ -60,29 +56,9 @@ export function configurarAcessoAdmin() {
     });
 }
 
-/* ======================================
-   🪟 MODAL
-====================================== */
-
-function abrirModalAdmin() {
-    document
-        .getElementById("adminLoginModal")
-        ?.classList.remove("is-hidden");
-
-    setTimeout(() => {
-        document
-            .getElementById("adminMatricula")
-            ?.focus();
-    }, 120);
-}
-
-function fecharModalAdmin() {
-    document
-        .getElementById("adminLoginModal")
-        ?.classList.add("is-hidden");
-
-    const input = document.getElementById("adminMatricula");
-    if (input) input.value = "";
+function abrirAdmin() {
+    // abre página protegida
+    window.location.href = "/admin.html";
 }
 
 /* ======================================
@@ -113,14 +89,9 @@ async function validarAcessoAdmin() {
     }
 
     try {
-        loginController?.abort();
-        loginController = new AbortController();
-
         const dados = await apiClient.post("adminlogin", {
             matricula,
             senha
-        }, {
-            signal: loginController.signal
         });
 
         if (DEBUG) console.log("LOGIN:", dados);
@@ -128,6 +99,9 @@ async function validarAcessoAdmin() {
         if (dados?.autorizado && dados?.token?.length > 10) {
 
             localStorage.setItem("adminToken", dados.token);
+
+            // 🔒 consome a chave de acesso
+            localStorage.removeItem(ADMIN_KEY);
 
             fecharModalAdmin();
 
@@ -142,22 +116,20 @@ async function validarAcessoAdmin() {
         }
 
     } catch (err) {
-
-        if (err.name === "AbortError") {
-            alert("Servidor demorou para responder.");
-        } else {
-            console.error(err);
-            alert("Erro ao conectar ao servidor.");
-        }
-
+        console.error(err);
+        alert("Erro ao conectar ao servidor.");
     } finally {
         emLogin = false;
     }
 }
 
-/* ======================================
-   ⏳ HELPERS
-====================================== */
+function fecharModalAdmin() {
+    document.getElementById("adminLoginModal")
+        ?.classList.add("is-hidden");
+
+    const input = document.getElementById("adminMatricula");
+    if (input) input.value = "";
+}
 
 function delay(ms) {
     return new Promise(r => setTimeout(r, ms));
