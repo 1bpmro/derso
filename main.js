@@ -359,3 +359,8 @@ async function bootstrap() {
    🚀 START
 ====================================== */
 document.addEventListener("DOMContentLoaded", bootstrap);
+
+
+// EXPOSIÇÃO TEMPORÁRIA PARA DEBUG
+window.STATE = STATE;
+window.apiClient = apiClient;
