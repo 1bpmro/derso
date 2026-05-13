@@ -79,51 +79,48 @@ function clearBadge() {
 }
 
 /* ======================================
-   📲 INSTALL HINT (SAFE MODE)
+   📲 INSTALL HINT (Otimizado)
 ====================================== */
 function showInstallHint() {
+    // 1. Não incomoda quem já instalou
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches 
+                         || window.navigator.standalone === true;
+    if (isStandalone) return;
 
-    const standalone = window.matchMedia("(display-mode: standalone)").matches;
-    if (standalone) return;
-
-    let shown = false;
+    // 2. Não incomoda quem já viu nesta sessão
+    if (APP.modalShown) return;
 
     const tryShow = () => {
-
-        if (shown) return true;
-
-        if (!APP.uiReady || !UI?.modal?.show) return false;
-
-        UI.modal.show(
-            "INSTALAÇÃO RECOMENDADA",
-            "Instale o DERSO para melhorar notificações e evitar perda de prazos.",
-            "📲",
-            "#1a3c6e"
-        );
-
-        shown = true;
-        return true;
-    };
-
-    // tentativa imediata
-    if (tryShow()) return;
-
-    let attempts = 0;
-
-    const interval = setInterval(() => {
-
-        attempts++;
-
-        if (tryShow() || attempts >= 12) {
-            clearInterval(interval);
+        // Verifica se a UI está pronta E se o loading já sumiu do mapa
+        const loadingAtivo = document.querySelector(".loading:not(.is-hidden)");
+        
+        if (!APP.uiReady || loadingAtivo || !UI?.modal?.show) {
+            return false;
         }
 
-    }, 400);
+        try {
+            UI.modal.show(
+                "DERSO NO CELULAR",
+                "Para receber alertas de escala e não perder prazos, adicione o DERSO à sua tela inicial.",
+                "📲",
+                "#1a3c6e"
+            );
+            APP.modalShown = true;
+            registrarLog("SISTEMA", "Prompt de instalação exibido", "INFO");
+            return true;
+        } catch (e) {
+            console.error("Erro ao abrir modal de instalação:", e);
+            return false;
+        }
+    };
 
-    // segurança extra (evita loop eterno silencioso)
+    // Tenta mostrar com um pequeno delay de segurança
     setTimeout(() => {
-        clearInterval(interval);
-    }, 6000);
+        if (!tryShow()) {
+            // Se falhou (ex: loading ainda na tela), tenta uma última vez em 5s
+            setTimeout(tryShow, 5000);
+        }
+    }, 500);
 }
 
 /* ======================================
@@ -260,7 +257,7 @@ function finalizeInit() {
     initAdmin();
     startPushFlow();
 
-    showInstallHint();
+    setTimeout(showInstallHint, 2000); // Aguarda 2s após o sistema ficar operacional
 
     APP.initialized = true;
 
