@@ -31,6 +31,7 @@
       background: #2c3e50;
       color: white;
       border: none;
+      cursor: pointer;
     }
 
     .hidden { display: none; }
@@ -39,13 +40,13 @@
 
 <body>
 
+<!-- 🔐 BLOQUEIO LOCAL SIMPLES -->
 <script>
-// 🔐 BLOQUEIO DE ACESSO DIRETO
 const unlock = localStorage.getItem("ADMIN_UNLOCK");
 
 if (!unlock || Date.now() > Number(unlock)) {
-    alert("Acesso não autorizado");
-    window.location.href = "/";
+  alert("Acesso não autorizado");
+  window.location.href = "/";
 }
 </script>
 
@@ -55,7 +56,7 @@ if (!unlock || Date.now() > Number(unlock)) {
   <input id="matricula" placeholder="Matrícula">
   <input id="senha" type="password" placeholder="Senha">
 
-  <button onclick="login()">Entrar</button>
+  <button id="btnLogin">Entrar</button>
 
   <p id="erro" style="color:red;"></p>
 </div>
@@ -65,76 +66,16 @@ if (!unlock || Date.now() > Number(unlock)) {
 
   <div id="boasVindas"></div>
 
-  <button onclick="listarFuncionarios()">Listar Funcionários</button>
-  <button onclick="logout()">Logout</button>
+  <button id="btnListar">Listar Funcionários</button>
+  <button id="btnLogout">Logout</button>
 
   <div id="conteudo"></div>
 </div>
 
-<script>
+<script type="module">
+import { configurarAdminPage } from "./features/adminAccess.js";
 
-const API_URL = "COLE_AQUI_SEU_LINK_DO_EXEC";
-
-function login() {
-
-  const matricula = document.getElementById("matricula").value;
-  const senha = document.getElementById("senha").value;
-
-  fetch(`${API_URL}?action=adminlogin&matricula=${matricula}&senha=${senha}`)
-    .then(r => r.json())
-    .then(data => {
-
-      if (data.autorizado) {
-
-        localStorage.setItem("adminToken", data.token);
-        localStorage.setItem("adminNome", data.nome);
-
-        // 🔒 consome acesso temporário
-        localStorage.removeItem("ADMIN_UNLOCK");
-
-        abrirDashboard();
-
-      } else {
-        document.getElementById("erro").innerText = "Login inválido";
-      }
-
-    });
-}
-
-function abrirDashboard() {
-
-  document.getElementById("loginBox").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-
-  const nome = localStorage.getItem("adminNome");
-
-  document.getElementById("boasVindas").innerHTML =
-    `<div>Bem-vindo, <b>${nome}</b></div>`;
-}
-
-function listarFuncionarios() {
-
-  fetch(`${API_URL}?action=lista`)
-    .then(r => r.json())
-    .then(data => {
-
-      let html = "<div>";
-
-      data.forEach(f => {
-        html += `${f.nome} - ${f.matricula}<br>`;
-      });
-
-      html += "</div>";
-
-      document.getElementById("conteudo").innerHTML = html;
-    });
-}
-
-function logout() {
-  localStorage.clear();
-  location.href = "/";
-}
-
+configurarAdminPage();
 </script>
 
 </body>
