@@ -1,5 +1,4 @@
 // ui/manager.js
-
 import { DOM } from "../core/dom.js";
 
 /* ======================================
@@ -13,10 +12,6 @@ export const UI = {
     ====================================== */
 
     modal: {
-        /**
-         * Garante que os elementos internos do modal existam.
-         * Se o HTML interno estiver ausente, ele o injeta dinamicamente.
-         */
         ensureStructure() {
             if (!DOM.modal) return null;
 
@@ -26,8 +21,7 @@ export const UI = {
             let modalClose = document.getElementById("btnCloseModal");
             let historyContent = document.getElementById("historyContent");
 
-            // Se a estrutura interna não existir, nós a criamos aqui
-            if (!modalTitle || !modalText || !modalIcon) {
+            if (!modalTitle || !modalText || !modalIcon || !modalClose) {
                 DOM.modal.innerHTML = `
                     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
                         <span id="modalIcon" aria-hidden="true">ℹ️</span>
@@ -38,14 +32,12 @@ export const UI = {
                     </div>
                 `;
 
-                // Recaptura as referências após injetar o HTML
                 modalTitle = document.getElementById("modalTitle");
                 modalText = document.getElementById("modalText");
                 modalIcon = document.getElementById("modalIcon");
                 modalClose = document.getElementById("btnCloseModal");
                 historyContent = document.getElementById("historyContent");
 
-                // Adiciona os eventos de fechar
                 modalClose?.addEventListener("click", () => this.hide());
                 DOM.modal.addEventListener("click", (e) => {
                     if (e.target === DOM.modal) this.hide();
@@ -56,31 +48,39 @@ export const UI = {
         },
 
         show(title, text, icon, color, showHistory = false) {
+            if (!DOM.modal) return;
+
             const refs = this.ensureStructure();
             if (!refs) return;
-
             const { modalTitle, modalText, modalIcon, historyContent } = refs;
 
-            // Exibe o container principal
+            // Exibe o container
             DOM.modal.classList.remove("is-hidden");
             DOM.modal.style.display = "flex";
             document.body.classList.add("modal-open");
 
-            // Preenche os dados
+            // Preenchimento de dados
             if (modalTitle) modalTitle.textContent = title;
+            
             if (modalIcon) {
                 modalIcon.textContent = icon;
                 modalIcon.style.color = color;
             }
 
             if (modalText) {
-                modalText.innerHTML = showHistory ? "" : text;
+                if (showHistory) {
+                    modalText.innerHTML = "";
+                } else {
+                    modalText.innerHTML = text;
+                }
             }
 
             // Controle do Histórico
             if (historyContent) {
                 historyContent.classList.toggle("is-hidden", !showHistory);
-                if (!showHistory) historyContent.innerHTML = "";
+                if (!showHistory) {
+                    historyContent.innerHTML = "";
+                }
             }
         },
 
@@ -140,7 +140,7 @@ export const UI = {
         shake(el) {
             if (!el) return;
             el.classList.remove("ui-shake");
-            void el.offsetWidth; 
+            void el.offsetWidth; // Força reflow (reinicia animação)
             el.classList.add("ui-shake");
             setTimeout(() => el.classList.remove("ui-shake"), 600);
         },
@@ -185,10 +185,17 @@ export const UI = {
         DOM.barra.classList.toggle("barra-completa", percentual === 100);
     },
 
+    /* ======================================
+       🔘 BOTÃO
+    ====================================== */
+
     setButtonState(btn, isLoading, loadingMessage = "ENVIANDO...") {
         if (!btn) return;
+
         if (isLoading) {
-            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+            if (!btn.dataset.originalText) {
+                btn.dataset.originalText = btn.textContent;
+            }
             btn.disabled = true;
             btn.textContent = loadingMessage;
         } else {
@@ -198,5 +205,5 @@ export const UI = {
     }
 };
 
-// Exposição global para debug
+// Exporta para o escopo global apenas para facilitar o debug via console
 window.UI = UI;
