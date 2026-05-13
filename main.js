@@ -137,7 +137,27 @@ async function loadInitialData() {
    🧠 STATE
 ====================================== */
 function hydrateState(data = {}) {
-    STATE.employeeList = data.lista || {};
+    // Limpa a lista atual sem quebrar a referência (mantendo o Seal feliz)
+    for (let prop in STATE.employeeList) {
+        delete STATE.employeeList[prop];
+    }
+
+    // Verifica se a lista veio como Array e transforma em Objeto indexado
+    const listaOriginal = data.lista || [];
+    
+    if (Array.isArray(listaOriginal)) {
+        listaOriginal.forEach(militar => {
+            // Usa a matrícula como CHAVE para busca rápida
+            if (militar.matricula) {
+                STATE.employeeList[militar.matricula] = militar;
+            }
+        });
+        registrarLog("SISTEMA", `Lista hidratada: ${listaOriginal.length} militares`, "INFO");
+    } else {
+        // Se já for um objeto, apenas mescla
+        Object.assign(STATE.employeeList, listaOriginal);
+    }
+
     STATE.userScore = data.score || 0;
 }
 
