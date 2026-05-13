@@ -1,6 +1,5 @@
 // core/dom.js
-
-import { CONFIG } from "./config.js"; 
+import { CONFIG } from "./config.js";
 
 function $(id) {
     return document.getElementById(id);
@@ -9,7 +8,8 @@ function $(id) {
 export { $ };
 
 function buildDOM() {
-    const DOM = {
+    // Mantive sua lógica original aqui
+    const elements = {
         form:               $("dersoForm"),
         email:              $("email"),
         matricula:          $("matricula"),
@@ -31,16 +31,22 @@ function buildDOM() {
     };
 
     if (CONFIG.DEBUG) {
-        Object.entries(DOM).forEach(([key, el]) => {
+        Object.entries(elements).forEach(([key, el]) => {
             if (!el) console.warn(`⚠️ DOM: elemento ausente → "${key}"`);
         });
     }
 
-    return DOM;
+    return elements;
 }
 
 export let DOM = {};
 
-document.addEventListener("DOMContentLoaded", () => {
+// --- ALTERAÇÃO AQUI: Execução imediata se o DOM já estiver pronto ---
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+        Object.assign(DOM, buildDOM());
+    });
+} else {
+    // Se o navegador já carregou o HTML, mapeia agora mesmo!
     Object.assign(DOM, buildDOM());
-});
+}
