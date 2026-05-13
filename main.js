@@ -1,12 +1,12 @@
-// main.js - DERSO v8 (Arquitetura Revisada e Blindada)
+// main.js - DERSO v8 (refatorado)
 
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
 import { DOM } from "./core/dom.js";
 
 import { UI } from "./ui/manager.js";
-
 import { registrarLog } from "./services/logger.js";
+
 import {
     applyInstitutionalTheme,
     applyDarkModeStyles
@@ -14,400 +14,265 @@ import {
 
 import { monitorarPrazos } from "./services/prazo.js";
 import { updateFooter } from "./services/footer.js";
-
-import {
-    restaurarRascunho
-} from "./services/storage.js";
-
+import { restaurarRascunho } from "./services/storage.js";
 import { registrarDispositivo } from "./services/firebase.js";
-
 import { setupEvents } from "./handlers/events.js";
-
-import {
-    configurarAcessoAdmin
-} from "./features/adminAccess.js";
+import { configurarAcessoAdmin } from "./features/adminAccess.js";
 
 /* ======================================
-   🌐 MODO GLOBAL
+   🌐 GLOBAL STATE FLAG
 ====================================== */
-
 window.__ADMIN_MODE__ = false;
 
 /* ======================================
-   🧪 DEBUG APENAS LOCALHOST
+   🧪 DEBUG LOCAL
 ====================================== */
+if (isLocalhost()) {
+    window.registrarDispositivo = registrarDispositivo;
+}
 
-if (
-    location.hostname === "localhost" ||
-    location.hostname.includes("127.0.0.1")
-) {
-    window.registrarDispositivo =
-        registrarDispositivo;
+function isLocalhost() {
+    return (
+        location.hostname === "localhost" ||
+        location.hostname.includes("127.0.0.1")
+    );
 }
 
 /* ======================================
-   🔒 CONTROLE DE PUSH
+   🔔 PUSH CONTROL
 ====================================== */
-
 let pushRegistrando = false;
 
 /* ======================================
-   🔔 LIMPEZA VISUAL
+   🧹 BADGE CLEANUP
 ====================================== */
-
 function limparAlertasVisuais() {
-
     if (!("clearAppBadge" in navigator)) return;
 
-    navigator.clearAppBadge()
-        .catch((err) => {
-
-            console.error(
-                "Erro ao limpar Badge:",
-                err
-            );
-        });
+    navigator.clearAppBadge().catch((err) => {
+        console.error("Erro ao limpar badge:", err);
+    });
 }
 
 /* ======================================
-   📲 PWA CHECK
+   📲 PWA INSTALL CHECK
 ====================================== */
-
 function verificarInstalacao() {
-
-    const isStandalone =
-        window.matchMedia(
-            "(display-mode: standalone)"
-        ).matches;
+    const isStandalone = window.matchMedia(
+        "(display-mode: standalone)"
+    ).matches;
 
     const isIOS =
-        /iPhone|iPad|iPod/.test(
-            navigator.userAgent
-        ) &&
+        /iPhone|iPad|iPod/.test(navigator.userAgent) &&
         !window.MSStream;
 
     if (isStandalone) return;
 
     setTimeout(() => {
-
         UI.modal.show(
             "INSTALAÇÃO RECOMENDADA",
-
-            "As notificações, lembretes e alertas do DERSO são enviados exclusivamente pelo aplicativo oficial. Instale para evitar a perda de prazos.",
-
+            "Instale o DERSO para receber alertas e evitar perda de prazos.",
             isIOS ? "⎋" : "📲",
-
             "#1a3c6e"
         );
-
     }, 5000);
 }
 
 /* ======================================
-   🔔 PUSH
+   🔔 PUSH REGISTRATION
 ====================================== */
-
 async function pedirPermissaoNotificacao() {
-
     if (pushRegistrando) return;
 
-    let matricula =
-        localStorage.getItem(
-            "matricula_usuario"
-        );
-
-    /* ================================
-       FALLBACK INPUT
-    ================================ */
+    const matricula = obterMatricula();
 
     if (!matricula) {
-
-        matricula =
-            DOM.matricula?.value?.trim();
-
-        if (matricula) {
-
-            localStorage.setItem(
-                "matricula_usuario",
-                matricula
-            );
-        }
-    }
-
-    /* ================================
-       SEM MATRÍCULA
-    ================================ */
-
-    if (!matricula) {
-
-        console.warn(
-            "⚠️ Matrícula não encontrada."
-        );
-
+        console.warn("⚠️ Matrícula não encontrada.");
         return;
     }
-
-    /* ================================
-       REGISTRO PROTEGIDO
-    ================================ */
 
     pushRegistrando = true;
 
     try {
-
-        await registrarDispositivo(
-            matricula
-        );
-
+        await registrarDispositivo(matricula);
     } catch (err) {
-
-        console.error(
-            "Erro ao registrar push:",
-            err
-        );
-
+        console.error("Erro push:", err);
     } finally {
-
         pushRegistrando = false;
     }
 }
 
 /* ======================================
-   ♻️ RESTAURA DRAFT
+   🔍 MATRICULA RESOLVER
 ====================================== */
+function obterMatricula() {
+    let mat = localStorage.getItem("matricula_usuario");
 
-function restaurarCamposFormulario() {
+    if (!mat) {
+        mat = DOM.matricula?.value?.trim();
 
-    const draft = restaurarRascunho();
+        if (mat) {
+            localStorage.setItem("matricula_usuario", mat);
+        }
+    }
 
-    if (!draft || !DOM.form) return;
-
-    Object.entries(draft)
-        .forEach(([key, value]) => {
-
-            const campo =
-                DOM.form.elements[key];
-
-            if (!campo) return;
-
-            /* ========================
-               RADIO
-            ======================== */
-
-            if (campo.type === "radio") {
-
-                const radio =
-                    DOM.form.querySelector(
-                        `input[name="${key}"][value="${value}"]`
-                    );
-
-                if (radio) {
-                    radio.checked = true;
-                }
-
-                return;
-            }
-
-            /* ========================
-               INPUT NORMAL
-            ======================== */
-
-            campo.value = value;
-        });
-
-    registrarLog(
-        "RASCUNHO",
-        "Rascunho restaurado",
-        "INFO"
-    );
+    return mat;
 }
 
 /* ======================================
-   🚀 BOOTSTRAP
+   🧾 RESTORE FORM
 ====================================== */
+function restaurarCamposFormulario() {
+    const draft = restaurarRascunho();
+    if (!draft || !DOM.form) return;
 
+    Object.entries(draft).forEach(([key, value]) => {
+        const campo = DOM.form.elements[key];
+        if (!campo) return;
+
+        if (campo.type === "radio") {
+            const radio = DOM.form.querySelector(
+                `input[name="${key}"][value="${value}"]`
+            );
+            if (radio) radio.checked = true;
+            return;
+        }
+
+        campo.value = value;
+    });
+
+    registrarLog("RASCUNHO", "Restaurado", "INFO");
+}
+
+/* ======================================
+   🚀 BOOTSTRAP CORE
+====================================== */
 async function bootstrap() {
-
     limparAlertasVisuais();
 
-    registrarLog(
-        "SISTEMA",
-        "Iniciando motor DERSO v8...",
-        "INFO"
-    );
+    registrarLog("SISTEMA", "Boot v8 iniciado", "INFO");
 
-    /* ================================
-       VALIDAÇÃO DOM
-    ================================ */
-
-    if (
-        !DOM.loading ||
-        !DOM.formContent
-    ) {
-
-        console.error(
-            "Falha Crítica: DOM incompleto."
-        );
-
+    if (!DOM.loading || !DOM.formContent) {
+        console.error("DOM incompleto");
         return;
     }
 
     try {
-
-        UI.loading.show(
-            "Sincronizando com o servidor..."
-        );
+        UI.loading.show("Sincronizando...");
 
         applyDarkModeStyles();
 
-        registrarLog(
-            "SISTEMA",
-            "Buscando dados institucionais e score..."
-        );
+        const result = await fetchInitialData();
 
-        /* ================================
-           FETCH
-        ================================ */
+        applyState(result);
 
-        const response = await fetch(
-            `${CONFIG.API_URL}?action=get_initial_data`
-        );
+        processarDadosIniciais(result);
 
-        if (!response.ok) {
-
-            throw new Error(
-                `Erro HTTP ${response.status}`
-            );
-        }
-
-        /* ================================
-           JSON SAFE
-        ================================ */
-
-        let result;
-
-        try {
-
-            result = await response.json();
-
-        } catch {
-
-            throw new Error(
-                "Resposta inválida do servidor"
-            );
-        }
-
-        /* ================================
-           ESTADO GLOBAL
-        ================================ */
-
-        STATE.employeeList =
-            result.lista || {};
-
-        STATE.userScore =
-            result.score || 0;
-
-        registrarLog(
-            "SISTEMA",
-            `Dados carregados. Score: ${STATE.userScore}`,
-            "SUCESSO"
-        );
-
-        /* ================================
-           PRAZOS
-        ================================ */
-
-        const datas = result.datas;
-
-        if (
-            datas?.abertura &&
-            datas?.fechamento
-        ) {
-
-            monitorarPrazos(
-                datas.abertura,
-                datas.fechamento
-            );
-        }
-
-        /* ================================
-           UI
-        ================================ */
-
-        applyInstitutionalTheme();
-
-        updateFooter();
-
-        setupEvents();
-
-        configurarAcessoAdmin();
-
-        restaurarCamposFormulario();
-
-        UI.loading.hide();
-
-        registrarLog(
-            "SISTEMA",
-            "Operacional.",
-            "SUCESSO"
-        );
-
-        verificarInstalacao();
-
-        /* ================================
-           PUSH
-        ================================ */
-
-        const matricula =
-            localStorage.getItem(
-                "matricula_usuario"
-            ) ||
-            DOM.matricula?.value?.trim();
-
-        if (!matricula) {
-
-            console.warn(
-                "⚠️ Push não ativado (sem matrícula)"
-            );
-
-            return;
-        }
-
-        setTimeout(() => {
-
-            pedirPermissaoNotificacao();
-
-        }, 3000);
+        finalizarInicializacao(result);
 
     } catch (error) {
+        tratarErroFatal(error);
+    }
+}
 
-        registrarLog(
-            "FALHA_CRITICA",
-            error.message,
-            "ERRO"
-        );
+/* ======================================
+   🌐 FETCH INITIAL DATA
+====================================== */
+async function fetchInitialData() {
+    const res = await fetch(
+        `${CONFIG.API_URL}?action=get_initial_data`
+    );
 
-        console.error(error);
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+    }
 
-        UI.loading.hide();
+    try {
+        return await res.json();
+    } catch {
+        throw new Error("JSON inválido do servidor");
+    }
+}
 
-        UI.modal.show(
-            "ERRO DE CONEXÃO",
+/* ======================================
+   🧠 STATE APPLY
+====================================== */
+function applyState(result) {
+    STATE.employeeList = result.lista || {};
+    STATE.userScore = result.score || 0;
+}
 
-            "Não foi possível conectar ao banco de dados.",
+/* ======================================
+   ⚙️ PROCESS DATA
+====================================== */
+function processarDadosIniciais(result) {
+    registrarLog(
+        "SISTEMA",
+        `Score: ${STATE.userScore}`,
+        "SUCESSO"
+    );
 
-            "📡",
-
-            "red"
+    if (result.datas?.abertura && result.datas?.fechamento) {
+        monitorarPrazos(
+            result.datas.abertura,
+            result.datas.fechamento
         );
     }
+}
+
+/* ======================================
+   🎯 FINAL UI INIT
+====================================== */
+function finalizarInicializacao(result) {
+    applyInstitutionalTheme();
+    updateFooter();
+    setupEvents();
+    configurarAcessoAdmin();
+    restaurarCamposFormulario();
+
+    UI.loading.hide();
+
+    registrarLog("SISTEMA", "Operacional", "SUCESSO");
+
+    verificarInstalacao();
+
+    iniciarPush();
+}
+
+/* ======================================
+   🔔 PUSH FLOW
+====================================== */
+function iniciarPush() {
+    const mat = obterMatricula();
+
+    if (!mat) {
+        console.warn("Push desativado (sem matrícula)");
+        return;
+    }
+
+    setTimeout(() => {
+        pedirPermissaoNotificacao();
+    }, 3000);
+}
+
+/* ======================================
+   ❌ ERROR HANDLER
+====================================== */
+function tratarErroFatal(error) {
+    registrarLog("FALHA_CRITICA", error.message, "ERRO");
+    console.error(error);
+
+    UI.loading.hide();
+
+    UI.modal.show(
+        "ERRO DE CONEXÃO",
+        "Falha ao sincronizar com servidor.",
+        "📡",
+        "red"
+    );
 }
 
 /* ======================================
    🚀 START
 ====================================== */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    bootstrap
-);
+document.addEventListener("DOMContentLoaded", bootstrap);
