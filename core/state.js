@@ -1,8 +1,5 @@
-//core/state.js
-
-
+// core/state.js
 export const STATE = Object.seal({
-
     /* ======================================
        📋 DADOS PRINCIPAIS
     ====================================== */
@@ -16,6 +13,7 @@ export const STATE = Object.seal({
 
     /* ======================================
        🧾 LOGS DE SESSÃO
+       ⚠️ Use .push() para adicionar — nunca reatribua o array
     ====================================== */
     sessionLogs: [],
 
@@ -26,18 +24,23 @@ export const STATE = Object.seal({
 
     /* ======================================
        🛠️ ADMIN
+       ⚠️ adminToken aqui é apenas cache de sessão.
+          A fonte de verdade é o adminGuard.js (localStorage).
+          Mantenha sincronizado ao autenticar/deslogar.
     ====================================== */
     adminToken: null,
     listaCompletaAdmin: [],
 
     /* ======================================
        📡 EVENTOS / MÉTRICAS
+       ⚠️ Use .push() para adicionar — nunca reatribua o array
     ====================================== */
     eventosPush: [],
     scoreMap: {},
 
     /* ======================================
-       🧠 METADADOS INTERNOS (leve evolução)
+       🧠 METADADOS INTERNOS
+       lastSync: null antes de inicializar, Date.now() após
     ====================================== */
     initialized: false,
     lastSync: null
