@@ -1,12 +1,12 @@
-/* ======================================
-   🚀 DERSO PWA - SERVICE WORKER v8 (refinado)
-====================================== */
+/* ==========================================================================
+   🚀 DERSO PWA - SERVICE WORKER v8 (refatorado)
+   ========================================================================== */
 
 const CACHE_NAME = "derso-v8";
 
-/* ======================================
-   📦 ARQUIVOS ESSENCIAIS
-====================================== */
+/* ==========================================================================
+   📦 ASSETS ESSENCIAIS
+   ========================================================================== */
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -17,9 +17,9 @@ const ASSETS_TO_CACHE = [
   "./assets/icon-512.png"
 ];
 
-/* ======================================
-   🔥 FIREBASE MESSAGING (background)
-====================================== */
+/* ==========================================================================
+   🔥 FIREBASE (background messaging)
+   ========================================================================== */
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
@@ -33,111 +33,122 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-/* ======================================
-   📦 INSTALL
-====================================== */
+/* ==========================================================================
+   🧠 HELPERS
+   ========================================================================== */
+const log = (...args) => console.log("📦 SW:", ...args);
+
+const isExternalRequest = (url) =>
+  url.hostname.includes("google") ||
+  url.hostname.includes("gstatic") ||
+  url.hostname.includes("firebase") ||
+  url.pathname.includes("/exec");
+
+/* ==========================================================================
+   📥 INSTALL
+   ========================================================================== */
 self.addEventListener("install", (event) => {
-  console.log("📦 Instalando SW v8...");
+  log("Instalando...");
 
   self.skipWaiting();
 
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      try {
-        await cache.addAll(ASSETS_TO_CACHE);
-      } catch (err) {
-        console.warn("⚠️ Falha ao cachear assets iniciais:", err);
+  event.waitUntil(cacheAssets());
+});
+
+async function cacheAssets() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(ASSETS_TO_CACHE);
+    log("Assets cacheados");
+  } catch (err) {
+    console.warn("⚠️ Erro ao cachear assets:", err);
+  }
+}
+
+/* ==========================================================================
+   ♻️ ACTIVATE
+   ========================================================================== */
+self.addEventListener("activate", (event) => {
+  log("Ativando...");
+
+  event.waitUntil(cleanOldCaches());
+});
+
+async function cleanOldCaches() {
+  const keys = await caches.keys();
+
+  await Promise.all(
+    keys.map((key) => {
+      if (key !== CACHE_NAME) {
+        log("Removendo cache antigo:", key);
+        return caches.delete(key);
       }
     })
   );
-});
 
-/* ======================================
-   ♻️ ACTIVATE
-====================================== */
-self.addEventListener("activate", (event) => {
-  console.log("♻️ Ativando SW v8...");
+  await self.clients.claim();
+}
 
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-
-      await Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log("🗑️ Removendo cache:", key);
-            return caches.delete(key);
-          }
-        })
-      );
-
-      await self.clients.claim();
-    })()
-  );
-});
-
-/* ======================================
-   🌐 FETCH (network first + cache fallback)
-====================================== */
+/* ==========================================================================
+   🌐 FETCH STRATEGY
+   ========================================================================== */
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // 🚫 ignora APIs e externos pesados
-  if (
-    url.hostname.includes("google") ||
-    url.hostname.includes("gstatic") ||
-    url.hostname.includes("firebase") ||
-    url.pathname.includes("/exec")
-  ) {
-    return;
-  }
+  if (shouldIgnoreRequest(req, url)) return;
 
-  // 🚫 ignora não-GET
-  if (req.method !== "GET") return;
-
-  event.respondWith(
-    (async () => {
-      try {
-        const networkResponse = await fetch(req);
-
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          url.origin === location.origin
-        ) {
-          const cache = await caches.open(CACHE_NAME);
-
-          // evita cache de respostas inválidas
-          cache.put(req, networkResponse.clone());
-        }
-
-        return networkResponse;
-
-      } catch (err) {
-        const cached = await caches.match(req);
-
-        if (cached) return cached;
-
-        // fallback SPA seguro
-        if (req.mode === "navigate") {
-          return caches.match("./index.html");
-        }
-
-        return new Response("Offline", {
-          status: 503,
-          statusText: "Offline"
-        });
-      }
-    })()
-  );
+  event.respondWith(networkFirst(req, url));
 });
 
-/* ======================================
-   🔔 PUSH NOTIFICATION
-====================================== */
+function shouldIgnoreRequest(req, url) {
+  if (req.method !== "GET") return true;
+  if (isExternalRequest(url)) return true;
+  return false;
+}
+
+async function networkFirst(req, url) {
+  try {
+    const network = await fetch(req);
+
+    if (isCacheable(network, url)) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(req, network.clone());
+    }
+
+    return network;
+  } catch (err) {
+    return fallbackResponse(req);
+  }
+}
+
+function isCacheable(response, url) {
+  return (
+    response &&
+    response.status === 200 &&
+    url.origin === location.origin
+  );
+}
+
+async function fallbackResponse(req) {
+  const cached = await caches.match(req);
+  if (cached) return cached;
+
+  if (req.mode === "navigate") {
+    return caches.match("./index.html");
+  }
+
+  return new Response("Offline", {
+    status: 503,
+    statusText: "Offline"
+  });
+}
+
+/* ==========================================================================
+   🔔 PUSH NOTIFICATIONS
+   ========================================================================== */
 messaging.onBackgroundMessage((payload) => {
-  console.log("📩 PUSH RECEBIDO:", payload);
+  log("Push recebido", payload);
 
   const notification = payload.notification || {};
   const data = payload.data || {};
@@ -158,30 +169,28 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(title, options);
 });
 
-/* ======================================
+/* ==========================================================================
    🖱️ NOTIFICATION CLICK
-====================================== */
+   ========================================================================== */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const data = event.notification.data || {};
-  const destino = data.url || "./";
+  const destino = event.notification?.data?.url || "./";
 
-  event.waitUntil(
-    (async () => {
-      const clientsList = await clients.matchAll({
-        type: "window",
-        includeUncontrolled: true
-      });
-
-      for (const client of clientsList) {
-        if (client.url.includes(destino)) {
-          await client.focus();
-          return;
-        }
-      }
-
-      await clients.openWindow(destino);
-    })()
-  );
+  event.waitUntil(focusOrOpen(destino));
 });
+
+async function focusOrOpen(destino) {
+  const clientsList = await clients.matchAll({
+    type: "window",
+    includeUncontrolled: true
+  });
+
+  for (const client of clientsList) {
+    if (client.url.includes(destino)) {
+      return client.focus();
+    }
+  }
+
+  return clients.openWindow(destino);
+}
