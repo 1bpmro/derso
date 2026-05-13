@@ -84,29 +84,32 @@ function clearBadge() {
 function showInstallHint() {
 
     const standalone = window.matchMedia("(display-mode: standalone)").matches;
-
     if (standalone) return;
-    if (!APP.uiReady) return; // 🔥 evita travar loading
 
-    if (APP.modalShown) return;
+    const tryShow = () => {
+        if (!UI?.modal?.show) return false;
 
-    setTimeout(() => {
+        UI.modal.show(
+            "INSTALAÇÃO RECOMENDADA",
+            "Instale o DERSO para melhorar notificações e evitar perda de prazos.",
+            "📲",
+            "#1a3c6e"
+        );
 
-        try {
-            UI.modal.show(
-                "INSTALAÇÃO RECOMENDADA",
-                "Instale o DERSO para melhorar notificações e evitar perda de prazos.",
-                "📲",
-                "#1a3c6e"
-            );
+        return true;
+    };
 
-            APP.modalShown = true;
+    let attempts = 0;
 
-        } catch (err) {
-            console.warn("Modal install falhou:", err);
+    const interval = setInterval(() => {
+
+        attempts++;
+
+        if (tryShow() || attempts > 10) {
+            clearInterval(interval);
         }
 
-    }, 5000);
+    }, 500);
 }
 
 /* ======================================
@@ -259,16 +262,16 @@ async function bootstrap() {
     APP.bootstrapTime = Date.now();
 
     clearBadge();
-
-    registrarLog("SISTEMA", "Boot v9.1 iniciado", "INFO");
-
-    if (!DOM.loading || !DOM.formContent) {
-        console.error("DOM incompleto");
-        return;
-    }
+    registrarLog("SISTEMA", "Boot v9 iniciado", "INFO");
 
     try {
-        UI.loading.show("Sincronizando sistema...");
+
+        // ⚠️ NÃO bloqueia app se DOM falhar parcialmente
+        if (!DOM.formContent) {
+            throw new Error("formContent não encontrado");
+        }
+
+        UI.loading?.show?.("Sincronizando sistema...");
 
         const data = await loadInitialData();
 
@@ -278,6 +281,16 @@ async function bootstrap() {
         finalizeInit();
 
     } catch (error) {
+
+        console.error("BOOT ERROR:", error);
+
+        // 🔥 GARANTE QUE A TELA NÃO FIQUE PRETA
+        UI.loading?.hide?.();
+
+        if (DOM.formContent) {
+            DOM.formContent.classList.remove("is-hidden");
+        }
+
         handleFatal(error);
     }
 }
