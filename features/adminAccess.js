@@ -11,6 +11,7 @@ let contadorCliques = 0;
 let temporizador = null;
 let loginController = null;
 let emLogin = false;
+let listenersAtivos = false;
 
 const DEBUG = false;
 
@@ -20,24 +21,28 @@ const DEBUG = false;
 
 export function configurarAcessoAdmin() {
 
+    if (listenersAtivos) return;
+    listenersAtivos = true;
+
     const footer = document.getElementById("footerText");
-    if (!footer) return;
+    if (footer) {
 
-    footer.addEventListener("click", () => {
+        footer.addEventListener("click", () => {
 
-        contadorCliques++;
+            contadorCliques++;
 
-        clearTimeout(temporizador);
+            clearTimeout(temporizador);
 
-        temporizador = setTimeout(() => {
-            contadorCliques = 0;
-        }, 2000);
+            temporizador = setTimeout(() => {
+                contadorCliques = 0;
+            }, 2000);
 
-        if (contadorCliques >= 5) {
-            contadorCliques = 0;
-            abrirModalAdmin();
-        }
-    });
+            if (contadorCliques >= 5) {
+                contadorCliques = 0;
+                abrirModalAdmin();
+            }
+        });
+    }
 
     const btnLogin = document.getElementById("btnAdminLogin");
 
@@ -60,17 +65,21 @@ export function configurarAcessoAdmin() {
 ====================================== */
 
 function abrirModalAdmin() {
-    const modal = document.getElementById("adminLoginModal");
-    modal?.classList.remove("is-hidden");
+    document
+        .getElementById("adminLoginModal")
+        ?.classList.remove("is-hidden");
 
     setTimeout(() => {
-        document.getElementById("adminMatricula")?.focus();
+        document
+            .getElementById("adminMatricula")
+            ?.focus();
     }, 120);
 }
 
 function fecharModalAdmin() {
-    const modal = document.getElementById("adminLoginModal");
-    modal?.classList.add("is-hidden");
+    document
+        .getElementById("adminLoginModal")
+        ?.classList.add("is-hidden");
 
     const input = document.getElementById("adminMatricula");
     if (input) input.value = "";
@@ -107,10 +116,6 @@ async function validarAcessoAdmin() {
         loginController?.abort();
         loginController = new AbortController();
 
-        const timeout = setTimeout(() => {
-            loginController.abort();
-        }, 10000);
-
         const dados = await apiClient.post("adminlogin", {
             matricula,
             senha
@@ -118,23 +123,16 @@ async function validarAcessoAdmin() {
             signal: loginController.signal
         });
 
-        clearTimeout(timeout);
+        if (DEBUG) console.log("LOGIN:", dados);
 
-        if (DEBUG) {
-            console.log("LOGIN RESPONSE:", dados);
-        }
-
-        if (
-            dados?.autorizado &&
-            typeof dados.token === "string" &&
-            dados.token.length > 10
-        ) {
+        if (dados?.autorizado && dados?.token?.length > 10) {
 
             localStorage.setItem("adminToken", dados.token);
 
             fecharModalAdmin();
 
             await delay(150);
+
             await iniciarPainelAdmin();
 
         } else {
@@ -148,7 +146,7 @@ async function validarAcessoAdmin() {
         if (err.name === "AbortError") {
             alert("Servidor demorou para responder.");
         } else {
-            console.error("LOGIN ERROR:", err);
+            console.error(err);
             alert("Erro ao conectar ao servidor.");
         }
 
@@ -162,5 +160,5 @@ async function validarAcessoAdmin() {
 ====================================== */
 
 function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(r => setTimeout(r, ms));
 }
