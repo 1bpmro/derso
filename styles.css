@@ -1,3 +1,4 @@
+```css
 /* ==========================================================================
    VARIÁVEIS E CONFIGURAÇÕES GERAIS
    ========================================================================== */
@@ -5,21 +6,33 @@
     --azul-marinho: #1A3C6E;
     --azul-hover: #255599;
     --ouro-brilhante: #FFD700;
+
     --sucesso-verde: #2E7D32;
     --alerta-laranja: #ef6c00;
     --critico-vermelho: #D32F2F;
+
     --cinza-fundo: #F0F2F5;
     --branco-card: #ffffff;
+
     --texto-principal: #333333;
     --texto-secundario: #666666;
+
     --borda-padrao: #e1e4e8;
+
     --raio-padrao: 12px;
     --sombra-suave: 0 10px 25px rgba(0, 0, 0, 0.05);
+
     --transicao: all 0.3s ease;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
 
+/* ==========================================================================
+   BASE
+   ========================================================================== */
 body {
     background-color: var(--cinza-fundo);
     font-family: 'Roboto', sans-serif;
@@ -28,37 +41,65 @@ body {
     display: flex;
     justify-content: center;
     color: var(--texto-principal);
+
+    min-height: 100vh;
+    overflow-x: hidden;
+
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
+}
+
+body.modal-open {
+    overflow: hidden;
 }
 
 /* ==========================================================================
-   CONTAINER E ESTRUTURA
+   CONTAINER
    ========================================================================== */
 .container {
     width: 100%;
     max-width: 500px;
+
     background: var(--branco-card);
+
     border-radius: var(--raio-padrao);
+
     padding: 35px 25px;
+
     box-shadow: var(--sombra-suave);
+
     position: relative;
     overflow: hidden;
+
+    animation: fadeIn 0.35s ease;
 }
 
+/* ==========================================================================
+   BARRA DE PROGRESSO
+   ========================================================================== */
 #barraProgresso {
     position: absolute;
-    top: 0; left: 0; width: 0%; height: 6px;
+    top: 0;
+    left: 0;
+
+    width: 0%;
+    height: 6px;
+
     background: var(--ouro-brilhante);
+
     transition: width 0.5s ease;
+
     z-index: 100;
 }
 
 .barra-completa {
-    box-shadow: 0 0 15px var(--sucesso-verde);
     background: var(--sucesso-verde) !important;
+    box-shadow: 0 0 15px rgba(46,125,50,0.5);
 }
 
 /* ==========================================================================
-   CABEÇALHO (O TOPO DO SISTEMA)
+   HEADER
    ========================================================================== */
 .header {
     text-align: center;
@@ -69,22 +110,33 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+
     gap: 20px;
+
     margin-bottom: 15px;
 }
 
 .logos img {
     height: 75px;
     width: auto;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
-    transition: var(--transicao);
+
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+
+    transition: transform 0.25s ease;
+}
+
+.logos img:hover {
+    transform: scale(1.03);
 }
 
 h2 {
     color: var(--azul-marinho);
+
     font-size: 22px;
-    margin: 10px 0 0 0;
     font-weight: 900;
+
+    margin: 10px 0 0;
+
     letter-spacing: 1px;
     text-transform: uppercase;
 }
@@ -92,306 +144,511 @@ h2 {
 .divisor {
     width: 70%;
     height: 3px;
-    background: linear-gradient(90deg, transparent, var(--ouro-brilhante), transparent);
+
     margin: 12px auto;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--ouro-brilhante),
+            transparent
+        );
 }
 
 .subtitle {
     font-size: 13px;
     color: var(--texto-secundario);
-    font-weight: 500;
-    margin: 0;
+
     line-height: 1.4;
+    font-weight: 500;
+
+    margin: 0;
 }
 
 /* ==========================================================================
-   NOVA TELA DE LOADING (PROFISSIONAL)
+   LOADING
    ========================================================================== */
 .loading-container {
     display: flex;
     flex-direction: column;
+
     align-items: center;
     justify-content: center;
-    padding: 60px 0;
+
     width: 100%;
+
+    padding: 60px 0;
 }
 
 .spinner {
     width: 45px;
     height: 45px;
-    border: 5px solid rgba(26, 60, 110, 0.1);
+
+    border: 5px solid rgba(26,60,110,0.1);
     border-left-color: var(--azul-marinho);
+
     border-radius: 50%;
+
     animation: spin 1s linear infinite;
+
     margin-bottom: 20px;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 #loadingText {
-    font-weight: 700;
-    color: var(--azul-marinho);
-    text-transform: uppercase;
     font-size: 13px;
+    font-weight: 700;
+
+    color: var(--azul-marinho);
+
+    text-transform: uppercase;
     letter-spacing: 1px;
+
     margin: 0;
 }
 
 /* ==========================================================================
-   STATUS E FORMULÁRIO
+   PRAZO / STATUS
    ========================================================================== */
 #prazoBox {
     padding: 20px;
+
     text-align: center;
+
     border-radius: var(--raio-padrao);
+
     margin-bottom: 25px;
+
     border: 2px solid var(--borda-padrao);
-    /* Força fundo claro e texto escuro em qualquer modo */
-    background: #ffffff !important; 
+
+    background: #ffffff !important;
     color: #333333 !important;
+
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
 
-#timerDisplay {
-    font-weight: 900; /* Aumentei para o máximo de negrito */
-    font-size: 17px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    color: inherit; /* Segue a cor do pai (#333) */
-}
-/* Variantes do PrazoBox - Agora com cores mais fortes para fundo branco */
-.estado-verde { 
-    border-color: var(--sucesso-verde) !important; 
-    color: var(--sucesso-verde) !important; 
-    background: #ffffff !important; 
-}
-.estado-alerta { 
-    border-color: var(--alerta-laranja) !important; 
-    color: #cc5c00 !important; /* Laranja um pouco mais escuro para leitura */
-    background: #ffffff !important; 
-}
-.estado-critico { 
-    border-color: var(--critico-vermelho) !important; 
-    color: var(--critico-vermelho) !important; 
-    background: #ffffff !important; 
-}
-
-#instMessage {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--azul-marinho);
-    background: rgba(26, 60, 110, 0.05);
-    padding: 15px;
-    border-left: 5px solid var(--ouro-brilhante);
-    margin-bottom: 25px;
-    border-radius: 6px;
-    text-align: center;
-}
-
-.form-group { margin-bottom: 22px; }
-
-label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    color: #444;
-}
-
-input:not([type="radio"]) {
-    width: 100%;
-    padding: 14px;
-    border: 2px solid var(--borda-padrao);
-    border-radius: 10px;
-    font-size: 16px;
-    outline: none;
     transition: var(--transicao);
 }
 
-input:focus {
-    border-color: var(--azul-marinho);
-    box-shadow: 0 0 0 4px rgba(26, 60, 110, 0.1);
+#timerDisplay {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    gap: 5px;
+
+    font-size: 17px;
+    font-weight: 900;
+
+    color: inherit;
 }
 
-/* Grid de Radios */
+.estado-verde {
+    border-color: var(--sucesso-verde) !important;
+    color: var(--sucesso-verde) !important;
+}
+
+.estado-alerta {
+    border-color: var(--alerta-laranja) !important;
+    color: #cc5c00 !important;
+}
+
+.estado-critico {
+    border-color: var(--critico-vermelho) !important;
+    color: var(--critico-vermelho) !important;
+}
+
+/* ==========================================================================
+   MENSAGEM INSTITUCIONAL
+   ========================================================================== */
+#instMessage {
+    font-size: 14px;
+    font-weight: 500;
+
+    color: var(--azul-marinho);
+
+    background: rgba(26, 60, 110, 0.05);
+
+    padding: 15px;
+
+    border-left: 5px solid var(--ouro-brilhante);
+
+    margin-bottom: 25px;
+
+    border-radius: 6px;
+
+    text-align: center;
+}
+
+/* ==========================================================================
+   FORMULÁRIO
+   ========================================================================== */
+.form-group {
+    margin-bottom: 22px;
+}
+
+label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    color: #444;
+}
+
+input:not([type="radio"]),
+select,
+textarea {
+    width: 100%;
+
+    padding: 14px;
+
+    border: 2px solid var(--borda-padrao);
+
+    border-radius: 10px;
+
+    font-size: 16px;
+
+    outline: none;
+
+    transition: var(--transicao);
+
+    background: #fff;
+    color: var(--texto-principal);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--azul-marinho);
+
+    box-shadow: 0 0 0 4px rgba(26,60,110,0.1);
+}
+
+/* ==========================================================================
+   RADIO GROUP
+   ========================================================================== */
 .radio-group {
     display: grid;
+
     grid-template-columns: repeat(4, 1fr);
+
     gap: 8px;
 }
 
-.radio-group input { display: none; }
+.radio-group input {
+    display: none;
+}
 
 .radio-group label {
     border: 2px solid var(--borda-padrao);
+
     padding: 12px 2px;
+
     border-radius: 10px;
+
     font-size: 12px;
     font-weight: 800;
+
     cursor: pointer;
+
     text-align: center;
+
     background: white;
+
     transition: var(--transicao);
 }
 
 .radio-group input:checked + label {
     background: var(--azul-marinho);
+
     color: var(--ouro-brilhante);
+
     border-color: var(--azul-marinho);
+
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(26, 60, 110, 0.2);
+
+    box-shadow: 0 4px 10px rgba(26,60,110,0.2);
 }
 
 /* ==========================================================================
-   BOTÕES E MODAIS
+   BOTÕES
    ========================================================================== */
 .btn {
     width: 100%;
+
     padding: 16px;
+
     border-radius: 10px;
+
     border: none;
+
     font-weight: 800;
+
     text-transform: uppercase;
+
     cursor: pointer;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     gap: 10px;
+
+    transition: var(--transicao);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
 }
 
 .btn-primary {
     background: var(--azul-marinho);
     color: #fff;
-    box-shadow: 0 5px 15px rgba(26, 60, 110, 0.2);
+
+    box-shadow: 0 5px 15px rgba(26,60,110,0.2);
+}
+
+.btn-primary:hover {
+    background: var(--azul-hover);
 }
 
 .btn-outline {
     background: transparent;
+
     border: 2px solid #d1d5db;
+
     color: var(--texto-secundario);
+
     font-size: 11px;
 }
 
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
 .footer {
     text-align: center;
+
     font-size: 11px;
+
     color: #888;
+
     margin-top: 30px;
     padding-top: 15px;
+
     border-top: 1px solid rgba(0,0,0,0.05);
-    
-    cursor: default !important; 
-    text-decoration: none;  
-    pointer-events: auto;   /* Essencial para o clique do Admin funcionar */
+
+    cursor: default !important;
+
+    text-decoration: none;
+
+    pointer-events: auto;
 }
 
 .footer:hover {
-    color: #888;            
-    text-decoration: none;  
-    cursor: default !important;
-} /* Chave fechada corretamente agora */
-
-.is-hidden { display: none !important; }
-
-/* MODO NOTURNO AJUSTADO */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --cinza-fundo: #0f172a;
-        --branco-card: #1e293b;
-        --texto-principal: #ffffff; /* Transformando o preto em BRANCO */
-        --texto-secundario: #94a3b8;
-        --borda-padrao: #334155;
-    }
-    
-    /* Garante que labels fiquem brancas no modo escuro */
-    label { color: #ffffff !important; }
-
-    input:not([type="radio"]) { background: #0f172a; color: white; border-color: #334155; }
-    .radio-group label { background: #1e293b; color: #ffffff; }
-    
-    /* O segredo: Mantemos o prazoBox como um "cartão branco" destacado */
-    #prazoBox { 
-        background: #ffffff !important; 
-        color: #333333 !important; 
-    }
+    color: #888;
+    text-decoration: none;
 }
+
 /* ==========================================================================
-   CONFIGURAÇÃO DO MODAL (ESTAVA FALTANDO!)
+   MODAL SYSTEM FIXED
    ========================================================================== */
 .modal {
-    display: none; /* Mantém escondido por padrão */
     position: fixed;
-    inset: 0; /* Ocupa a tela toda */
-    background: rgba(15, 23, 42, 0.85); /* Fundo escuro transparente */
+    inset: 0;
+
+    display: flex;
+
     align-items: center;
     justify-content: center;
+
+    background: rgba(15, 23, 42, 0.82);
+
+    backdrop-filter: blur(6px);
+
     z-index: 9999;
+
     padding: 20px;
-    backdrop-filter: blur(5px); /* Efeito de desfoque no fundo */
+
+    opacity: 1;
+    visibility: visible;
+
+    transition:
+        opacity 0.25s ease,
+        visibility 0.25s ease,
+        backdrop-filter 0.25s ease;
+}
+
+/* 🔥 escondido corretamente */
+.modal.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .modal-content {
     background: var(--branco-card);
+
     padding: 30px;
+
     border-radius: var(--raio-padrao);
+
     width: 100%;
     max-width: 400px;
+
     text-align: center;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    animation: modalEntrada 0.3s ease-out;
+
+    position: relative;
+    overflow: hidden;
+
+    box-shadow:
+        0 20px 40px rgba(0,0,0,0.3),
+        0 0 0 1px rgba(255,255,255,0.03);
+
+    animation: modalEntrada 0.25s ease-out;
+}
+
+.modal-content::before {
+    content: "";
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.08),
+            transparent 35%
+        );
+
+    pointer-events: none;
 }
 
 @keyframes modalEntrada {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(20px) scale(0.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
 }
 
 #modalIcon {
     font-size: 50px;
+
     margin-bottom: 15px;
+
     display: block;
 }
 
 #modalTitle {
     font-size: 20px;
     font-weight: 900;
+
     margin-bottom: 10px;
+
     color: var(--azul-marinho);
+
     text-transform: uppercase;
 }
 
 #modalText {
     font-size: 15px;
+
     color: var(--texto-secundario);
+
     margin-bottom: 25px;
+
     line-height: 1.5;
 }
 
-/* Estilo para a lista de histórico dentro do modal */
+/* ==========================================================================
+   HISTÓRICO
+   ========================================================================== */
 .historico-item {
     background: rgba(0,0,0,0.03);
+
     padding: 10px;
+
     border-radius: 8px;
+
     margin-bottom: 8px;
+
     display: flex;
     justify-content: space-between;
+
     font-size: 13px;
+
     border-left: 4px solid var(--azul-marinho);
 }
 
-select.admin-input {
-    background: white;
+/* ==========================================================================
+   ADMIN
+   ========================================================================== */
+.admin-wrapper {
+    animation: fadeIn 0.4s ease;
+}
+
+.admin-header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 20px;
+
+    border-bottom: 2px solid var(--ouro-brilhante);
+
+    padding-bottom: 10px;
+}
+
+.btn-exit {
+    background: #eee;
+
+    border: none;
+
+    padding: 5px 12px;
+
+    border-radius: 5px;
+
     cursor: pointer;
+
     font-weight: bold;
-    color: var(--azul-marinho);
+}
+
+.admin-stats {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
 }
 
 .stat-box {
+    background: var(--azul-marinho);
+
+    color: white;
+
+    padding: 15px;
+
+    border-radius: 10px;
+
+    text-align: center;
+
     transition: transform 0.2s ease;
 }
 
@@ -399,28 +656,204 @@ select.admin-input {
     transform: scale(1.02);
 }
 
-/* Garante que o gráfico não quebre em telas pequenas */
+.stat-box span {
+    display: block;
+
+    font-size: 24px;
+    font-weight: 900;
+
+    color: var(--ouro-brilhante);
+}
+
+.stat-box label {
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    margin: 0;
+
+    color: #fff;
+
+    opacity: 0.8;
+}
+
+.admin-tools {
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 15px;
+}
+
+.admin-input {
+    flex: 1;
+
+    padding: 10px !important;
+
+    font-size: 14px !important;
+}
+
+select.admin-input {
+    background: white;
+
+    cursor: pointer;
+
+    font-weight: bold;
+
+    color: var(--azul-marinho);
+}
+
+.btn-export {
+    background: var(--sucesso-verde);
+
+    color: white;
+
+    border: none;
+
+    border-radius: 5px;
+
+    padding: 0 15px;
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.admin-table-scroll {
+    max-height: 400px;
+
+    overflow-y: auto;
+
+    border: 1px solid var(--borda-padrao);
+
+    border-radius: 8px;
+}
+
+.admin-table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    background: white;
+}
+
+.admin-table th {
+    position: sticky;
+    top: 0;
+
+    background: #f8f9fa;
+
+    padding: 10px;
+
+    font-size: 11px;
+
+    text-align: left;
+
+    border-bottom: 2px solid var(--borda-padrao);
+}
+
+.admin-table td {
+    padding: 10px;
+
+    border-bottom: 1px solid #eee;
+}
+
+.tag-folga {
+    background: #e3f2fd;
+
+    color: #1a3c6e;
+
+    padding: 3px 8px;
+
+    border-radius: 4px;
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
 #chartFolgas {
     max-width: 100% !important;
 }
 
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
+.is-hidden {
+    display: none !important;
+}
 
-/* ESTILOS DO PAINEL ADMIN */
-.admin-wrapper { animation: fadeIn 0.4s ease; }
-.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--ouro-brilhante); padding-bottom: 10px; }
-.btn-exit { background: #eee; border: none; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-.admin-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-.stat-box { background: var(--azul-marinho); color: white; padding: 15px; border-radius: 10px; text-align: center; }
-.stat-box span { display: block; font-size: 24px; font-weight: 900; color: var(--ouro-brilhante); }
-.stat-box label { font-size: 10px; text-transform: uppercase; margin: 0; color: #fff; opacity: 0.8; }
-.admin-tools { display: flex; gap: 10px; margin-bottom: 15px; }
-.admin-input { flex: 1; padding: 10px !important; font-size: 14px !important; }
-.btn-export { background: var(--sucesso-verde); color: white; border: none; border-radius: 5px; padding: 0 15px; cursor: pointer; font-size: 12px; font-weight: bold; }
-.admin-table-scroll { max-height: 400px; overflow-y: auto; border: 1px solid var(--borda-padrao); border-radius: 8px; }
-.admin-table { width: 100%; border-collapse: collapse; background: white; }
-.admin-table th { position: sticky; top: 0; background: #f8f9fa; padding: 10px; font-size: 11px; text-align: left; border-bottom: 2px solid var(--borda-padrao); }
-.admin-table td { padding: 10px; border-bottom: 1px solid #eee; }
-.tag-folga { background: #e3f2fd; color: #1a3c6e; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; }
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    :root {
+        --cinza-fundo: #0f172a;
+        --branco-card: #1e293b;
 
+        --texto-principal: #ffffff;
+        --texto-secundario: #94a3b8;
+
+        --borda-padrao: #334155;
+    }
+
+    label {
+        color: #ffffff !important;
+    }
+
+    input:not([type="radio"]),
+    select,
+    textarea {
+        background: #0f172a;
+        color: white;
+        border-color: #334155;
+    }
+
+    .radio-group label {
+        background: #1e293b;
+        color: #ffffff;
+    }
+
+    #prazoBox {
+        background: #ffffff !important;
+        color: #333333 !important;
+    }
+
+    .admin-table {
+        background: #1e293b;
+        color: white;
+    }
+
+    .admin-table th {
+        background: #0f172a;
+    }
+
+    .admin-table td {
+        border-bottom: 1px solid #334155;
+    }
+
+    .modal-content {
+        background: #1e293b;
+    }
+
+    #modalTitle {
+        color: white;
+    }
+}
+
+/* ==========================================================================
+   ANIMAÇÕES
+   ========================================================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+```
