@@ -192,78 +192,47 @@ function validarEmail(valor) {
 ====================================== */
 
 function setupMatriculaValidation() {
-
     if (!DOM.matricula) return;
 
-    const erroEl =
-        document.getElementById(
-            "erroMatricula"
-        );
+    const erroEl = document.getElementById("erroMatricula");
 
-    DOM.matricula.addEventListener(
-        "blur",
-        () => {
+    DOM.matricula.addEventListener("blur", () => {
+        let valorRaw = DOM.matricula.value.trim().replace(/\D/g, "");
+        if (!valorRaw) return;
 
-            let valor =
-                DOM.matricula.value
-                    .trim()
-                    .replace(/\D/g, "");
-
-            if (!valor) return;
-
-            if (!valor.startsWith("1000")) {
-                valor = `1000${valor}`;
-            }
-
-            DOM.matricula.value = valor;
-
-            localStorage.setItem(
-                "matricula_usuario",
-                valor
-            );
-
-            const militar =
-                STATE.employeeList[valor];
-
-            if (militar?.nome) {
-
-                DOM.nome.value =
-                    militar.nome;
-
-                erroEl?.classList.add(
-                    "is-hidden"
-                );
-
-                registrarLog(
-                    "VALIDACAO",
-                    `Militar identificado: ${militar.nome}`,
-                    "SUCESSO"
-                );
-
-                applyInstitutionalTheme(
-                    valor
-                );
-
-            } else {
-
-                DOM.nome.value = "";
-
-                erroEl?.classList.remove(
-                    "is-hidden"
-                );
-
-                applyInstitutionalTheme();
-
-                registrarLog(
-                    "VALIDACAO",
-                    `Matrícula não encontrada: ${valor}`,
-                    "AVISO"
-                );
-            }
-
-            UI.updateProgress();
+        // Garante o prefixo 1000
+        if (!valorRaw.startsWith("1000")) {
+            valorRaw = `1000${valorRaw}`;
         }
-    );
+
+        const valor = String(valorRaw); // FORÇA STRING
+        DOM.matricula.value = valor;
+
+        localStorage.setItem("matricula_usuario", valor);
+
+        // BUSCA SEGURA: Tenta no objeto e, se falhar, tenta buscar por valor 
+        // (Isso ajuda se a hidratação salvou como número por erro)
+        let militar = STATE.employeeList ? STATE.employeeList[valor] : null;
+
+        if (!militar && STATE.employeeList) {
+            militar = Object.values(STATE.employeeList).find(m => String(m.matricula) === valor);
+        }
+
+        if (militar && (militar.nome || militar.NOME)) {
+            DOM.nome.value = militar.nome || militar.NOME;
+            erroEl?.classList.add("is-hidden");
+
+            registrarLog("VALIDACAO", `Militar identificado: ${DOM.nome.value}`, "SUCESSO");
+            applyInstitutionalTheme(valor);
+        } else {
+            DOM.nome.value = "";
+            erroEl?.classList.remove("is-hidden");
+            applyInstitutionalTheme();
+            registrarLog("VALIDACAO", `Matrícula não encontrada no sistema: ${valor}`, "AVISO");
+        }
+
+        UI.updateProgress();
+    });
 }
 
 /* ======================================
