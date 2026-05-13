@@ -1,4 +1,4 @@
-// main.js - DERSO v8 (refatorado e alinhado com apiClient)
+// main.js - DERSO v9 CORE ENGINE 🧠⚙️
 
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
@@ -18,162 +18,79 @@ import { configurarAcessoAdmin } from "./features/adminAccess.js";
 import { apiClient } from "./core/apiClient.js";
 
 /* ======================================
-   🌐 GLOBAL STATE FLAG
+   🧠 APP CORE STATE
 ====================================== */
+const APP = {
+    initialized: false,
+    bootstrapTime: null,
+    pushLocked: false,
+    error: null
+};
+
 window.__ADMIN_MODE__ = false;
 
 /* ======================================
-   🧠 ADMIN GUARD (SEGURANÇA LEVE)
+   🔐 GUARDS
 ====================================== */
-function canEnableAdminAccess() {
+function hasAdminSession() {
     const token = localStorage.getItem("adminToken");
     return Boolean(token && token.length > 10);
 }
 
-/* ======================================
-   🧪 DEBUG LOCAL
-====================================== */
-function isLocalhost() {
-    return (
-        location.hostname === "localhost" ||
-        location.hostname.includes("127.0.0.1")
-    );
+function getMatricula() {
+    const cached = localStorage.getItem("matricula_usuario");
+    if (cached) return cached;
+
+    const input = DOM.matricula?.value?.trim();
+    if (input) {
+        localStorage.setItem("matricula_usuario", input);
+    }
+
+    return input;
 }
 
-if (isLocalhost()) {
-    window.registrarDispositivo = registrarDispositivo;
-}
-
 /* ======================================
-   🔔 PUSH CONTROL
+   🧹 UI HELPERS
 ====================================== */
-let pushRegistrando = false;
-
-/* ======================================
-   🧹 BADGE CLEANUP
-====================================== */
-function limparAlertasVisuais() {
+function clearBadge() {
     if (!("clearAppBadge" in navigator)) return;
-
-    navigator.clearAppBadge().catch((err) => {
-        console.error("Erro ao limpar badge:", err);
-    });
+    navigator.clearAppBadge().catch(() => {});
 }
 
-/* ======================================
-   📲 PWA INSTALL CHECK
-====================================== */
-function verificarInstalacao() {
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+function showInstallHint() {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches;
 
-    const isIOS =
-        /iPhone|iPad|iPod/.test(navigator.userAgent) &&
-        !window.MSStream;
-
-    if (isStandalone) return;
+    if (standalone) return;
 
     setTimeout(() => {
         UI.modal.show(
             "INSTALAÇÃO RECOMENDADA",
-            "Instale o DERSO para receber alertas e evitar perda de prazos.",
-            isIOS ? "⎋" : "📲",
+            "Instale o DERSO para melhorar notificações e evitar perda de prazos.",
+            "📲",
             "#1a3c6e"
         );
     }, 5000);
 }
 
 /* ======================================
-   🔍 MATRICULA RESOLVER
+   🌐 API LAYER
 ====================================== */
-function obterMatricula() {
-    let mat = localStorage.getItem("matricula_usuario");
-
-    if (!mat) {
-        mat = DOM.matricula?.value?.trim();
-
-        if (mat) {
-            localStorage.setItem("matricula_usuario", mat);
-        }
-    }
-
-    return mat;
-}
-
-/* ======================================
-   🔔 PUSH REGISTRATION
-====================================== */
-async function pedirPermissaoNotificacao() {
-    if (pushRegistrando) return;
-
-    const matricula = obterMatricula();
-
-    if (!matricula) {
-        console.warn("⚠️ Matrícula não encontrada.");
-        return;
-    }
-
-    pushRegistrando = true;
-
-    try {
-        await registrarDispositivo(matricula);
-    } catch (err) {
-        console.error("Erro push:", err);
-    } finally {
-        pushRegistrando = false;
-    }
-}
-
-/* ======================================
-   🧾 RESTORE FORM
-====================================== */
-function restaurarCamposFormulario() {
-    const draft = restaurarRascunho();
-    if (!draft || !DOM.form) return;
-
-    Object.entries(draft).forEach(([key, value]) => {
-        const campo = DOM.form.elements[key];
-        if (!campo) return;
-
-        if (campo.type === "radio") {
-            const radio = DOM.form.querySelector(
-                `input[name="${key}"][value="${value}"]`
-            );
-            if (radio) radio.checked = true;
-            return;
-        }
-
-        campo.value = value;
-    });
-
-    registrarLog("RASCUNHO", "Restaurado", "INFO");
-}
-
-/* ======================================
-   🌐 FETCH INITIAL DATA
-====================================== */
-async function fetchInitialData() {
+async function loadInitialData() {
     return await apiClient.get("get_initial_data");
 }
 
 /* ======================================
-   🧠 STATE APPLY
+   🧠 STATE PIPELINE
 ====================================== */
-function applyState(result = {}) {
-    STATE.employeeList = result.lista || {};
-    STATE.userScore = result.score || 0;
+function hydrateState(data = {}) {
+    STATE.employeeList = data.lista || {};
+    STATE.userScore = data.score || 0;
 }
 
-/* ======================================
-   ⚙️ PROCESS DATA
-====================================== */
-function processarDadosIniciais(result = {}) {
-    registrarLog(
-        "SISTEMA",
-        `Score: ${STATE.userScore}`,
-        "SUCESSO"
-    );
+function processBusinessRules(data = {}) {
+    registrarLog("SISTEMA", `Score: ${STATE.userScore}`, "INFO");
 
-    const datas = result.datas;
+    const datas = data.datas;
 
     if (datas?.abertura && datas?.fechamento) {
         monitorarPrazos(datas.abertura, datas.fechamento);
@@ -181,49 +98,104 @@ function processarDadosIniciais(result = {}) {
 }
 
 /* ======================================
-   🎯 FINAL UI INIT
+   🧾 FORM RESTORE
 ====================================== */
-function finalizarInicializacao() {
-    applyInstitutionalTheme();
-    updateFooter();
+function restoreForm() {
+    const draft = restaurarRascunho();
+    if (!draft || !DOM.form) return;
 
-    // 🔐 SÓ ativa admin se houver sessão válida
-    if (canEnableAdminAccess()) {
-        configurarAcessoAdmin();
+    for (const [key, value] of Object.entries(draft)) {
+        const field = DOM.form.elements[key];
+        if (!field) continue;
+
+        if (field.type === "radio") {
+            const radio = DOM.form.querySelector(
+                `input[name="${key}"][value="${value}"]`
+            );
+            if (radio) radio.checked = true;
+        } else {
+            field.value = value;
+        }
     }
 
-    setupEvents();
-    restaurarCamposFormulario();
-
-    UI.loading.hide();
-
-    registrarLog("SISTEMA", "Operacional", "SUCESSO");
-
-    verificarInstalacao();
-
-    iniciarPush();
+    registrarLog("RASCUNHO", "Restaurado", "INFO");
 }
 
 /* ======================================
    🔔 PUSH FLOW
 ====================================== */
-function iniciarPush() {
-    const mat = obterMatricula();
+async function registerPushIfPossible() {
+    if (APP.pushLocked) return;
 
-    if (!mat) {
-        console.warn("Push desativado (sem matrícula)");
-        return;
+    const matricula = getMatricula();
+    if (!matricula) return;
+
+    APP.pushLocked = true;
+
+    try {
+        await registrarDispositivo(matricula);
+    } catch (err) {
+        console.error("Push error:", err);
+    } finally {
+        APP.pushLocked = false;
     }
+}
+
+/* ======================================
+   🔐 ADMIN FLOW
+====================================== */
+function initAdmin() {
+    if (!hasAdminSession()) return;
+    configurarAcessoAdmin();
+}
+
+/* ======================================
+   🎯 FINALIZE INIT
+====================================== */
+function finalizeInit() {
+
+    applyInstitutionalTheme();
+    applyDarkModeStyles();
+
+    updateFooter();
+
+    setupEvents();
+    restoreForm();
+
+    clearBadge();
+
+    UI.loading.hide();
+
+    registrarLog("SISTEMA", "Operacional", "SUCESSO");
+
+    showInstallHint();
+
+    initAdmin();
+    startPushFlow();
+
+    APP.initialized = true;
+}
+
+/* ======================================
+   🔔 PUSH FLOW START
+====================================== */
+function startPushFlow() {
+    const mat = getMatricula();
+
+    if (!mat) return;
 
     setTimeout(() => {
-        pedirPermissaoNotificacao();
+        registerPushIfPossible();
     }, 3000);
 }
 
 /* ======================================
    ❌ ERROR HANDLER
 ====================================== */
-function tratarErroFatal(error) {
+function handleFatal(error) {
+
+    APP.error = error;
+
     registrarLog("FALHA_CRITICA", error.message, "ERRO");
     console.error(error);
 
@@ -238,12 +210,15 @@ function tratarErroFatal(error) {
 }
 
 /* ======================================
-   🚀 BOOTSTRAP CORE
+   🚀 BOOT SEQUENCE (PIPELINE CONTROLLED)
 ====================================== */
 async function bootstrap() {
-    limparAlertasVisuais();
 
-    registrarLog("SISTEMA", "Boot v8 iniciado", "INFO");
+    APP.bootstrapTime = Date.now();
+
+    clearBadge();
+
+    registrarLog("SISTEMA", "Boot v9 iniciado", "INFO");
 
     if (!DOM.loading || !DOM.formContent) {
         console.error("DOM incompleto");
@@ -251,18 +226,17 @@ async function bootstrap() {
     }
 
     try {
-        UI.loading.show("Sincronizando...");
+        UI.loading.show("Sincronizando sistema...");
 
-        applyDarkModeStyles();
+        const data = await loadInitialData();
 
-        const result = await fetchInitialData();
+        hydrateState(data);
+        processBusinessRules(data);
 
-        applyState(result);
-        processarDadosIniciais(result);
-        finalizarInicializacao(result);
+        finalizeInit();
 
     } catch (error) {
-        tratarErroFatal(error);
+        handleFatal(error);
     }
 }
 
