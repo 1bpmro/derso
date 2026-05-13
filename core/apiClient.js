@@ -1,18 +1,16 @@
 import { CONFIG } from "./config.js";
 import { registrarLog } from "../services/logger.js";
 
-/* ======================================
-   🌐 CLIENTE CENTRAL DE API
-====================================== */
-
 const DEFAULT_TIMEOUT = 10000;
 const MAX_RETRY = 2;
 
 async function request(url, options = {}, retry = 0) {
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
 
     try {
+
         const response = await fetch(url, {
             ...options,
             signal: controller.signal
@@ -40,7 +38,6 @@ async function request(url, options = {}, retry = 0) {
             "ERRO"
         );
 
-        // 🔁 retry automático leve
         if (retry < MAX_RETRY) {
             return request(url, options, retry + 1);
         }
@@ -52,11 +49,12 @@ async function request(url, options = {}, retry = 0) {
     }
 }
 
-/* ======================================
-   📦 GET PADRÃO
-====================================== */
+/* =========================
+   GET
+========================= */
 
 export function get(action, params = {}) {
+
     const query = new URLSearchParams({
         action,
         ...params
@@ -65,13 +63,13 @@ export function get(action, params = {}) {
     return request(`${CONFIG.API_URL}?${query.toString()}`);
 }
 
-/* ======================================
-   📤 POST PADRÃO
-====================================== */
+/* =========================
+   POST
+========================= */
 
 export function post(action, body = {}) {
-    const formData = new FormData();
 
+    const formData = new FormData();
     formData.append("action", action);
 
     Object.entries(body).forEach(([k, v]) => {
@@ -83,10 +81,6 @@ export function post(action, body = {}) {
         body: formData
     });
 }
-
-/* ======================================
-   🔒 EXPORT PADRÃO
-====================================== */
 
 export const apiClient = {
     get,
