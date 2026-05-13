@@ -1,5 +1,4 @@
-//core/api.js
-
+// core/api.js
 import { CONFIG } from "./config.js";
 
 /* ======================================
@@ -8,26 +7,21 @@ import { CONFIG } from "./config.js";
 async function safeFetch(url, options = {}, timeout = 10000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
-
     try {
         const res = await fetch(url, {
             ...options,
             signal: controller.signal
         });
-
         if (!res.ok) {
             throw new Error(`Erro HTTP ${res.status}`);
         }
-
         const text = await res.text();
-
         try {
             return JSON.parse(text);
         } catch {
             console.warn("⚠️ Resposta não é JSON:", text);
             throw new Error(`Resposta inválida: ${text.slice(0, 200)}`);
         }
-
     } catch (err) {
         if (err.name === "AbortError") {
             throw new Error("Timeout na requisição");
@@ -47,15 +41,15 @@ export async function carregarDadosIniciais() {
         safeFetch(`${CONFIG.API_URL}?action=lista`)
     ]);
 
-    const datas =
-        results[0].status === "fulfilled"
-            ? results[0].value
-            : [];
+    if (results[0].status === "rejected") {
+        console.warn("⚠️ Falha ao carregar datas:", results[0].reason);
+    }
+    if (results[1].status === "rejected") {
+        console.warn("⚠️ Falha ao carregar lista:", results[1].reason);
+    }
 
-    const lista =
-        results[1].status === "fulfilled"
-            ? results[1].value
-            : [];
+    const datas = results[0].status === "fulfilled" ? results[0].value : [];
+    const lista = results[1].status === "fulfilled" ? results[1].value : [];
 
     return { datas, lista };
 }
@@ -64,10 +58,14 @@ export async function carregarDadosIniciais() {
    📤 ENVIO DE FORMULÁRIO
 ====================================== */
 export async function enviarFormulario(formData) {
-    return safeFetch(CONFIG.API_URL, {
-        method: "POST",
-        body: formData
-    });
+    return safeFetch(
+        CONFIG.API_URL,
+        {
+            method: "POST",
+            body: formData
+        },
+        15000 // timeout maior para envios
+    );
 }
 
 /* ======================================
@@ -75,15 +73,12 @@ export async function enviarFormulario(formData) {
 ====================================== */
 export async function buscarHistorico(matricula) {
     if (!matricula) return [];
-
     const resposta = await safeFetch(
         `${CONFIG.API_URL}?action=historico&matricula=${encodeURIComponent(matricula)}`
     );
-
     const lista =
         resposta?.dados ??
         resposta?.history ??
         resposta;
-
     return Array.isArray(lista) ? lista : [];
 }
