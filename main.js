@@ -82,42 +82,29 @@ function clearBadge() {
    📲 INSTALL HINT (Otimizado)
 ====================================== */
 function showInstallHint() {
-    // 1. Bloqueios básicos (Standalone ou já mostrado)
+    // Se já estiver em modo standalone ou já mostrou o modal, aborta.
     if (window.matchMedia("(display-mode: standalone)").matches || APP.modalShown) return;
 
-    const tryShow = () => {
-        // 2. Só mostra se o Loading REALMENTE sumiu
-        const loadingElement = document.getElementById("loading"); // Ou o ID que você usa
-        const isStillLoading = loadingElement && !loadingElement.classList.contains("is-hidden");
-
-        if (isStillLoading || !APP.uiReady) return false;
+    // Aguarda o sistema estabilizar (3 segundos)
+    setTimeout(() => {
+        // SEGURANÇA: Se o loading ainda estiver visível, não tenta mostrar o modal agora
+        const loadingAtivo = !DOM.loading.classList.contains("is-hidden");
+        if (loadingAtivo) {
+            registrarLog("SISTEMA", "Install Hint adiado: Loading ainda ativo", "WARN");
+            return;
+        }
 
         try {
+            registrarLog("SISTEMA", "Chamando modal de instalação...", "INFO");
             UI.modal.show(
                 "DERSO NO CELULAR 📲",
-                "Para não perder prazos e receber alertas de escala, instale o app na sua tela inicial.",
+                "Instale o app para receber alertas de escala e não perder os prazos de folga.",
                 "📲",
                 "#1a3c6e"
             );
             APP.modalShown = true;
-            registrarLog("SISTEMA", "Prompt de instalação exibido", "INFO");
-            return true;
         } catch (e) {
-            return false;
-        }
-    };
-
-    // 3. O PULO DO GATO: Espera 3 segundos após o Boot total
-    // Isso garante que o usuário já viu a tela carregada antes do pop-up
-    setTimeout(() => {
-        if (!tryShow()) {
-            // Se falhou (ex: loading demorou), tenta de novo em 5s
-            const retry = setInterval(() => {
-                if (tryShow()) clearInterval(retry);
-            }, 5000);
-            
-            // Não deixa o intervalo rodar pra sempre
-            setTimeout(() => clearInterval(retry), 30000);
+            console.error("Falha ao exibir hint:", e);
         }
     }, 3000); 
 }
