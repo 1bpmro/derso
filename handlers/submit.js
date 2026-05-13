@@ -1,8 +1,7 @@
 // handlers/submit.js
 
 import { DOM } from "../core/dom.js";
-
-import { CONFIG } from "../core/config.js";
+import { apiClient } from "../core/apiClient.js";
 
 import { STATE } from "../core/state.js";
 
@@ -121,8 +120,6 @@ export async function handleSubmit(e) {
         "ENVIANDO SOLICITAÇÃO..."
     );
 
-    let timeout = null;
-
     try {
 
         /* ================================
@@ -138,59 +135,8 @@ export async function handleSubmit(e) {
             matriculaLimpa
         );
 
-        const body =
-            new URLSearchParams(formData);
-
-        /* ================================
-           ⏱️ TIMEOUT
-        ================================ */
-
-        const controller =
-            new AbortController();
-
-        timeout = setTimeout(() => {
-
-            controller.abort();
-
-        }, 10000);
-
-        /* ================================
-           📡 REQUEST
-        ================================ */
-
-        const response = await fetch(
-            CONFIG.API_URL,
-            {
-                method: "POST",
-                body,
-                signal: controller.signal
-            }
-        );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Erro HTTP ${response.status}`
-            );
-        }
-
-        /* ================================
-           📦 JSON
-        ================================ */
-
-        let result = null;
-
-        try {
-
-            result =
-                await response.json();
-
-        } catch {
-
-            throw new Error(
-                "Servidor retornou resposta inválida"
-            );
-        }
+        const body = new URLSearchParams(formData);
+        const result = await apiClient.postForm(body);
 
         /* ================================
            ✅ SUCESSO
@@ -261,11 +207,6 @@ export async function handleSubmit(e) {
         );
 
     } finally {
-
-        if (timeout) {
-            clearTimeout(timeout);
-        }
-
         envioEmAndamento = false;
 
         UI.feedback.unlockForm();
@@ -318,43 +259,45 @@ function tratarErroServidor(response) {
        🚫 DUPLICIDADE
     ================================ */
 
-    const duplicado = [
-
-        "já existe",
-        "duplicada",
-        "duplicado",
-        "registro existente"
-
-    ].some(termo =>
-        texto.includes(termo)
-    );
-
-    if (duplicado) {
-
+    if (
+        texto.includes("duplicado") ||
+        texto.includes("já existe")
+    ) {
         UI.modal.show(
             "SOLICITAÇÃO DUPLICADA",
-            "Já existe uma solicitação registrada para esta data.",
-            "🚫",
+            "Já existe solicitação para esta data/tipo. Verifique seu histórico.",
+            "⚠️",
             "orange"
         );
-
-        limparFormulario();
-
         return;
     }
 
     /* ================================
-       ⚠️ ERRO GENÉRICO
+       📅 PERÍODO FECHADO
+    ================================ */
+
+    if (
+        texto.includes("prazo") ||
+        texto.includes("fechado") ||
+        texto.includes("bloqueado")
+    ) {
+        UI.modal.show(
+            "PRAZO ENCERRADO",
+            "O período para solicitação desta data está fechado.",
+            "⛔",
+            "red"
+        );
+        return;
+    }
+
+    /* ================================
+       ❌ ERRO GENÉRICO
     ================================ */
 
     UI.modal.show(
-        "AVISO",
+        "ERRO",
         mensagem,
-        "⚠️",
-        "orange"
-    );
-
-    UI.feedback.shake(
-        DOM.form
+        "❌",
+        "red"
     );
 }
