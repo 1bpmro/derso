@@ -1,4 +1,5 @@
 // ui/manager.js
+
 import { DOM } from "../core/dom.js";
 
 /* ======================================
@@ -12,41 +13,74 @@ export const UI = {
     ====================================== */
 
     modal: {
+        /**
+         * Garante que os elementos internos do modal existam.
+         * Se o HTML interno estiver ausente, ele o injeta dinamicamente.
+         */
+        ensureStructure() {
+            if (!DOM.modal) return null;
+
+            let modalTitle = document.getElementById("modalTitle");
+            let modalText = document.getElementById("modalText");
+            let modalIcon = document.getElementById("modalIcon");
+            let modalClose = document.getElementById("btnCloseModal");
+            let historyContent = document.getElementById("historyContent");
+
+            // Se a estrutura interna não existir, nós a criamos aqui
+            if (!modalTitle || !modalText || !modalIcon) {
+                DOM.modal.innerHTML = `
+                    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+                        <span id="modalIcon" aria-hidden="true">ℹ️</span>
+                        <h3 id="modalTitle">Aviso</h3>
+                        <div id="modalText"></div>
+                        <div id="historyContent" class="is-hidden"></div>
+                        <button id="btnCloseModal" class="btn btn-primary" type="button">FECHAR</button>
+                    </div>
+                `;
+
+                // Recaptura as referências após injetar o HTML
+                modalTitle = document.getElementById("modalTitle");
+                modalText = document.getElementById("modalText");
+                modalIcon = document.getElementById("modalIcon");
+                modalClose = document.getElementById("btnCloseModal");
+                historyContent = document.getElementById("historyContent");
+
+                // Adiciona os eventos de fechar
+                modalClose?.addEventListener("click", () => this.hide());
+                DOM.modal.addEventListener("click", (e) => {
+                    if (e.target === DOM.modal) this.hide();
+                });
+            }
+
+            return { modalTitle, modalText, modalIcon, historyContent };
+        },
+
         show(title, text, icon, color, showHistory = false) {
-            if (!DOM.modal) return;
+            const refs = this.ensureStructure();
+            if (!refs) return;
 
-            // Seleção interna para evitar erro de "null" se o DOM não estiver pronto no load
-            const modalTitle = document.getElementById("modalTitle");
-            const modalText = document.getElementById("modalText");
-            const modalIcon = document.getElementById("modalIcon");
+            const { modalTitle, modalText, modalIcon, historyContent } = refs;
 
-            // Exibe o container
+            // Exibe o container principal
             DOM.modal.classList.remove("is-hidden");
             DOM.modal.style.display = "flex";
             document.body.classList.add("modal-open");
 
-            // Preenchimento de dados
+            // Preenche os dados
             if (modalTitle) modalTitle.textContent = title;
-            
             if (modalIcon) {
                 modalIcon.textContent = icon;
                 modalIcon.style.color = color;
             }
 
             if (modalText) {
-                if (showHistory) {
-                    modalText.innerHTML = "";
-                } else {
-                    modalText.innerHTML = text;
-                }
+                modalText.innerHTML = showHistory ? "" : text;
             }
 
             // Controle do Histórico
-            if (DOM.historyContent) {
-                DOM.historyContent.classList.toggle("is-hidden", !showHistory);
-                if (!showHistory) {
-                    DOM.historyContent.innerHTML = "";
-                }
+            if (historyContent) {
+                historyContent.classList.toggle("is-hidden", !showHistory);
+                if (!showHistory) historyContent.innerHTML = "";
             }
         },
 
@@ -106,7 +140,7 @@ export const UI = {
         shake(el) {
             if (!el) return;
             el.classList.remove("ui-shake");
-            void el.offsetWidth; // Força reflow (reinicia animação)
+            void el.offsetWidth; 
             el.classList.add("ui-shake");
             setTimeout(() => el.classList.remove("ui-shake"), 600);
         },
@@ -151,17 +185,10 @@ export const UI = {
         DOM.barra.classList.toggle("barra-completa", percentual === 100);
     },
 
-    /* ======================================
-       🔘 BOTÃO
-    ====================================== */
-
     setButtonState(btn, isLoading, loadingMessage = "ENVIANDO...") {
         if (!btn) return;
-
         if (isLoading) {
-            if (!btn.dataset.originalText) {
-                btn.dataset.originalText = btn.textContent;
-            }
+            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
             btn.disabled = true;
             btn.textContent = loadingMessage;
         } else {
@@ -171,5 +198,5 @@ export const UI = {
     }
 };
 
-// Exporta para o escopo global apenas para facilitar o debug via console
+// Exposição global para debug
 window.UI = UI;
