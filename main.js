@@ -13,7 +13,7 @@ import { updateFooter } from "./services/footer.js";
 import { restaurarRascunho } from "./services/storage.js";
 import { registrarDispositivo } from "./services/firebase.js";
 import { setupEvents } from "./handlers/events.js";
-import { configurarAcessoAdmin } from "./features/adminAccess.js";
+import { configurarAdminPage } from "./features/adminAccess.js";
 
 import { apiClient } from "./core/apiClient.js";
 
@@ -146,7 +146,7 @@ async function registerPushIfPossible() {
 ====================================== */
 function initAdmin() {
     if (!hasAdminSession()) return;
-    configurarAcessoAdmin();
+    configurarAdminPage();
 }
 
 /* ======================================
