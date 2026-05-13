@@ -86,8 +86,13 @@ function showInstallHint() {
     const standalone = window.matchMedia("(display-mode: standalone)").matches;
     if (standalone) return;
 
+    let shown = false;
+
     const tryShow = () => {
-        if (!UI?.modal?.show) return false;
+
+        if (shown) return true;
+
+        if (!APP.uiReady || !UI?.modal?.show) return false;
 
         UI.modal.show(
             "INSTALAÇÃO RECOMENDADA",
@@ -96,8 +101,12 @@ function showInstallHint() {
             "#1a3c6e"
         );
 
+        shown = true;
         return true;
     };
+
+    // tentativa imediata
+    if (tryShow()) return;
 
     let attempts = 0;
 
@@ -105,11 +114,16 @@ function showInstallHint() {
 
         attempts++;
 
-        if (tryShow() || attempts > 10) {
+        if (tryShow() || attempts >= 12) {
             clearInterval(interval);
         }
 
-    }, 500);
+    }, 400);
+
+    // segurança extra (evita loop eterno silencioso)
+    setTimeout(() => {
+        clearInterval(interval);
+    }, 6000);
 }
 
 /* ======================================
@@ -264,16 +278,41 @@ async function bootstrap() {
     clearBadge();
     registrarLog("SISTEMA", "Boot v9 iniciado", "INFO");
 
+    // 🧯 fallback global anti-tela preta
+    const safetyUnlock = setTimeout(() => {
+        console.warn("⚠️ SAFETY UNLOCK acionado");
+
+        UI.loading?.hide?.();
+
+        if (DOM.formContent) {
+            DOM.formContent.classList.remove("is-hidden");
+        }
+
+        document.body.style.overflow = "auto";
+    }, 10000);
+
     try {
 
-        // ⚠️ NÃO bloqueia app se DOM falhar parcialmente
-        if (!DOM.formContent) {
+        // ⚠️ DOM parcial não pode matar app inteiro
+        if (!DOM?.formContent) {
             throw new Error("formContent não encontrado");
         }
 
+        // 🔵 mostra loading (mas não bloqueia render)
         UI.loading?.show?.("Sincronizando sistema...");
 
-        const data = await loadInitialData();
+        // 🧠 força browser renderizar UI antes do fetch
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+
+        let data;
+
+        try {
+            data = await loadInitialData();
+        } catch (apiError) {
+            console.warn("API falhou, continuando offline fallback:", apiError);
+            data = {}; // fallback seguro
+        }
 
         hydrateState(data);
         processBusinessRules(data);
@@ -284,17 +323,18 @@ async function bootstrap() {
 
         console.error("BOOT ERROR:", error);
 
-        // 🔥 GARANTE QUE A TELA NÃO FIQUE PRETA
         UI.loading?.hide?.();
 
-        if (DOM.formContent) {
+        if (DOM?.formContent) {
             DOM.formContent.classList.remove("is-hidden");
         }
 
         handleFatal(error);
+
+    } finally {
+        clearTimeout(safetyUnlock);
     }
 }
-
 /* ======================================
    🚀 START
 ====================================== */
