@@ -1,136 +1,122 @@
 // features/adminAccess.js
 
-import { iniciarPainelAdmin } from "./admin.js";
 import { apiClient } from "../core/apiClient.js";
 
-let contadorCliques = 0;
-let temporizador = null;
 let emLogin = false;
-let listenersAtivos = false;
 
-const DEBUG = false;
+export function configurarAdminPage() {
 
-// 🔐 janela de acesso ao admin (60s)
-const ADMIN_KEY = "ADMIN_UNLOCK";
+    const btnLogin = document.getElementById("btnLogin");
+    const btnListar = document.getElementById("btnListar");
+    const btnLogout = document.getElementById("btnLogout");
 
-export function configurarAcessoAdmin() {
+    btnLogin?.addEventListener("click", login);
+    btnListar?.addEventListener("click", listarFuncionarios);
+    btnLogout?.addEventListener("click", logout);
 
-    if (listenersAtivos) return;
-    listenersAtivos = true;
-
-    const footer = document.getElementById("footerText");
-
-    footer?.addEventListener("click", () => {
-
-        contadorCliques++;
-
-        clearTimeout(temporizador);
-
-        temporizador = setTimeout(() => {
-            contadorCliques = 0;
-        }, 2000);
-
-        if (contadorCliques >= 5) {
-            contadorCliques = 0;
-
-            // 🔑 libera acesso temporário
-            localStorage.setItem(ADMIN_KEY, String(Date.now() + 60000));
-
-            abrirAdmin();
-        }
-    });
-
-    const btnLogin = document.getElementById("btnAdminLogin");
-
-    btnLogin?.addEventListener("click", async () => {
-
-        if (btnLogin.disabled || emLogin) return;
-
-        btnLogin.disabled = true;
-
-        try {
-            await validarAcessoAdmin();
-        } finally {
-            btnLogin.disabled = false;
-        }
-    });
+    abrirDashboardSeLogado();
 }
 
-function abrirAdmin() {
-    // abre página protegida
-    window.location.href = "/admin.html";
-}
+/* =========================
+   🔐 LOGIN
+========================= */
 
-/* ======================================
-   🔐 LOGIN ADMIN
-====================================== */
-
-async function validarAcessoAdmin() {
+async function login() {
 
     if (emLogin) return;
     emLogin = true;
 
-    const input = document.getElementById("adminMatricula");
-    const matricula = input?.value?.trim();
+    const matricula = document.getElementById("matricula")?.value?.trim();
+    const senha = document.getElementById("senha")?.value?.trim();
+    const erro = document.getElementById("erro");
 
-    if (!matricula) {
-        alert("Digite a matrícula");
-        input?.focus();
-        emLogin = false;
-        return;
-    }
+    erro.innerText = "";
 
-    const senha = prompt("Digite a senha administrativa:");
-
-    if (!senha) {
-        alert("Senha não informada");
+    if (!matricula || !senha) {
+        erro.innerText = "Preencha matrícula e senha";
         emLogin = false;
         return;
     }
 
     try {
-        const dados = await apiClient.post("adminlogin", {
+        const data = await apiClient.post("adminlogin", {
             matricula,
             senha
         });
 
-        if (DEBUG) console.log("LOGIN:", dados);
+        if (data?.autorizado) {
 
-        if (dados?.autorizado && dados?.token?.length > 10) {
+            localStorage.setItem("adminToken", data.token);
+            localStorage.setItem("adminNome", data.nome);
 
-            localStorage.setItem("adminToken", dados.token);
+            localStorage.removeItem("ADMIN_UNLOCK");
 
-            // 🔒 consome a chave de acesso
-            localStorage.removeItem(ADMIN_KEY);
-
-            fecharModalAdmin();
-
-            await delay(150);
-
-            await iniciarPainelAdmin();
+            abrirDashboard();
 
         } else {
-            alert("Credenciais inválidas.");
-            input.value = "";
-            input.focus();
+            erro.innerText = "Login inválido";
         }
 
     } catch (err) {
         console.error(err);
-        alert("Erro ao conectar ao servidor.");
+        erro.innerText = "Erro ao conectar ao servidor";
     } finally {
         emLogin = false;
     }
 }
 
-function fecharModalAdmin() {
-    document.getElementById("adminLoginModal")
-        ?.classList.add("is-hidden");
+/* =========================
+   📊 DASHBOARD
+========================= */
 
-    const input = document.getElementById("adminMatricula");
-    if (input) input.value = "";
+function abrirDashboard() {
+
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    const nome = localStorage.getItem("adminNome");
+
+    document.getElementById("boasVindas").innerHTML =
+        `Bem-vindo, <b>${nome}</b>`;
 }
 
-function delay(ms) {
-    return new Promise(r => setTimeout(r, ms));
+function abrirDashboardSeLogado() {
+
+    const token = localStorage.getItem("adminToken");
+
+    if (token) {
+        abrirDashboard();
+    }
+}
+
+/* =========================
+   👥 LISTAR FUNCIONÁRIOS
+========================= */
+
+async function listarFuncionarios() {
+
+    try {
+        const data = await apiClient.get("lista");
+
+        let html = "";
+
+        data.forEach(f => {
+            html += `${f.nome} - ${f.matricula}<br>`;
+        });
+
+        document.getElementById("conteudo").innerHTML = html;
+
+    } catch (err) {
+        console.error(err);
+        alert("Erro ao listar funcionários");
+    }
+}
+
+/* =========================
+   🚪 LOGOUT
+========================= */
+
+function logout() {
+    localStorage.clear();
+    location.href = "/";
 }
