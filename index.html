@@ -1,142 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <base target="_top">
-  <meta charset="UTF-8">
-  <title>Painel Administrativo</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f9;
-      margin: 0;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
 
-    .login-box, .dashboard {
-      width: 350px;
-      margin: 100px auto;
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+    <title>DERSO 1º BPM - Solicitação</title>
 
-    h2 {
-      margin-top: 0;
-      text-align: center;
-    }
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1A3C6E">
 
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #2c3e50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #34495e;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .menu {
-      text-align: center;
-      margin-top: 20px;
-    }
-
-    .card {
-      background: #ecf0f1;
-      padding: 15px;
-      border-radius: 6px;
-      margin: 10px 0;
-    }
-  </style>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DERSO">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
 </head>
+
 <body>
 
-<div class="login-box" id="loginBox">
-  <h2>Admin Login</h2>
-  <input type="text" id="matricula" placeholder="Matrícula">
-  <input type="password" id="senha" placeholder="Senha">
-  <button onclick="login()">Entrar</button>
-  <p id="erro" style="color:red;text-align:center;"></p>
+<div class="container">
+
+    <div id="barraProgresso"></div>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logos">
+            <img src="https://rondonia.ro.gov.br/wp-content/uploads/2024/09/Brasao-PMRO-370x523.png">
+            <img src="https://museu.pm.ro.gov.br/wp-content/uploads/2024/05/1-bpm-3.png">
+        </div>
+
+        <h2>DERSO 1º BPM</h2>
+
+        <div class="divisor"></div>
+
+        <p class="subtitle">
+            Formulário de Solicitação de Diária Especial de Reforço do Serviço Operacional
+        </p>
+    </header>
+
+    <!-- LOADING -->
+    <div id="loadingScreen" class="loading-container">
+        <div class="spinner"></div>
+        <p id="loadingText">Sincronizando dados com o sistema...</p>
+    </div>
+
+    <!-- FORMULARIO (SEU CORPO PRINCIPAL - INTATO) -->
+    <div id="formContent" class="is-hidden">
+
+        <section id="prazoBox">
+            <strong class="prazoTitulo">STATUS DO SISTEMA</strong>
+            <div id="timerDisplay">⌛ CALCULANDO PRAZO...</div>
+
+            <div id="consultaFechada" class="is-hidden">
+                <input type="text" id="matriculaConsulta" placeholder="Matrícula p/ consulta" inputmode="numeric">
+
+                <button type="button" class="btn btn-outline" id="btnHistoryFechado">
+                    📂 VER MINHAS SOLICITAÇÕES
+                </button>
+            </div>
+        </section>
+
+        <div id="instMessage"></div>
+
+        <form id="dersoForm">
+
+            <div class="form-group">
+                <label for="email" class="required">E-mail</label>
+                <input type="email" id="email" name="email" required>
+                <datalist id="emailProviders"></datalist>
+            </div>
+
+            <div class="form-group">
+                <label for="matricula" class="required">Matrícula</label>
+                <input type="text" id="matricula" name="matricula" inputmode="numeric" required>
+
+                <span id="erroMatricula" class="is-hidden">
+                    ⚠️ MATRÍCULA NÃO LOCALIZADA
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" readonly>
+            </div>
+
+            <div class="form-group">
+                <label class="required">Tipo de Folga</label>
+
+                <div class="radio-group" id="radioFolga">
+                    <input type="radio" id="f24" name="folga" value="24H" required><label for="f24">24H</label>
+                    <input type="radio" id="f48" name="folga" value="48H"><label for="f48">48H</label>
+                    <input type="radio" id="f72" name="folga" value="72H"><label for="f72">72H</label>
+                    <input type="radio" id="f96" name="folga" value="96H"><label for="f96">96H</label>
+                    <input type="radio" id="fLE" name="folga" value="FOLGA LE"><label for="fLE">LE</label>
+                    <input type="radio" id="f1" name="folga" value="1ª Folga"><label for="f1">1ª</label>
+                    <input type="radio" id="f2" name="folga" value="2ª Folga"><label for="f2">2ª</label>
+                    <input type="radio" id="fExp" name="folga" value="Expediente"><label for="fExp">EXP</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="data" class="required">Data da Folga</label>
+                <input type="date" id="data" name="data" required>
+                <small id="infoPeriodo"></small>
+            </div>
+
+            <button type="button" class="btn btn-outline" id="btnHistory">
+                📂 VER MINHAS SOLICITAÇÕES
+            </button>
+
+            <button type="submit" class="btn btn-primary" id="btnEnviar">
+                ENVIAR SOLICITAÇÃO
+            </button>
+
+        </form>
+    </div>
+
+    <!-- FOOTER (IMPORTANTE PRO ADMIN UNLOCK) -->
+    <footer class="footer" id="footerText"></footer>
+
 </div>
 
-<div class="dashboard hidden" id="dashboard">
-  <h2>Dashboard</h2>
-  <div id="boasVindas"></div>
+<!-- MODAL NORMAL -->
+<div id="modalMsg" class="modal is-hidden"></div>
 
-  <div class="menu">
-    <button onclick="listarFuncionarios()">Listar Funcionários</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+<!-- MODAL ADMIN (ligado ao adminAccess.js) -->
+<div id="adminLoginModal" class="modal is-hidden">
+    <div class="modal-content">
 
-  <div id="conteudo"></div>
+        <div style="font-size: 50px;">🔐</div>
+
+        <h3>ACESSO ADMINISTRATIVO</h3>
+
+        <input type="text" id="adminMatricula" placeholder="Matrícula" inputmode="numeric">
+
+        <button class="btn btn-primary" id="btnAdminLogin">
+            ENTRAR
+        </button>
+
+    </div>
 </div>
 
+<!-- 🚀 SISTEMA CENTRAL -->
+<script type="module" src="main.js"></script>
+
+<!-- PWA -->
 <script>
-
-const API_URL = "COLE_AQUI_SEU_LINK_DO_EXEC";
-
-function login() {
-  const matricula = document.getElementById("matricula").value;
-  const senha = document.getElementById("senha").value;
-
-  fetch(`${API_URL}?action=adminlogin&matricula=${matricula}&senha=${senha}`)
-    .then(res => res.json())
-    .then(data => {
-
-      if (data.autorizado) {
-        localStorage.setItem("adminToken", data.token);
-        localStorage.setItem("adminNome", data.nome);
-        abrirDashboard();
-      } else {
-        document.getElementById("erro").innerText = "Login inválido";
-      }
-
-    });
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log("PWA ativo:", reg.scope))
+        .catch(err => console.error(err));
 }
-
-function abrirDashboard() {
-  document.getElementById("loginBox").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-
-  const nome = localStorage.getItem("adminNome");
-  document.getElementById("boasVindas").innerHTML =
-    `<div class="card">Bem-vindo, <strong>${nome}</strong></div>`;
-}
-
-function listarFuncionarios() {
-  fetch(`${API_URL}?action=lista`)
-    .then(res => res.json())
-    .then(data => {
-      let html = "<div class='card'><strong>Funcionários:</strong><br><br>";
-      data.forEach(f => {
-        html += `${f.nome} - ${f.matricula}<br>`;
-      });
-      html += "</div>";
-
-      document.getElementById("conteudo").innerHTML = html;
-    });
-}
-
-function logout() {
-  localStorage.clear();
-  location.reload();
-}
-
 </script>
 
 </body>
