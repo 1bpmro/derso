@@ -41,16 +41,18 @@ export async function iniciarPainelAdmin() {
 
         bindEventos();
 
-        await carregarDados();
+        const ok = await carregarDados();
 
-        adminStore.carregado = true;
-        window.__ADMIN_MODE__ = true;
+        if (ok) {
+            adminStore.carregado = true;
+            registrarLog("ADMIN", "Painel iniciado", "SUCESSO");
+        }
 
-        registrarLog("ADMIN", "Painel iniciado", "SUCESSO");
+        // Não expor via window — apenas registrar internamente
+        // window.__ADMIN_MODE__ foi removido por segurança
 
     } catch (err) {
         container.innerHTML = erroHTML(err.message);
-
         registrarLog("ADMIN_ERRO", err.message, "ERRO");
     } finally {
         adminStore.processando = false;
@@ -58,7 +60,7 @@ export async function iniciarPainelAdmin() {
 }
 
 /* ======================================
-   📦 DADOS (AGORA VIA API CLIENT)
+   📦 DADOS (VIA API CLIENT — params separados)
 ====================================== */
 
 async function carregarDados() {
@@ -70,18 +72,14 @@ async function carregarDados() {
     try {
         UI.loading.show("Sincronizando painel...");
 
+        // Corrigido: token e mes como params, não embutidos na action string
         const [dadosAdmin, eventosPush] = await Promise.all([
-            apiClient.get(`readall_admin&token=${token}&mes=${mes}`),
-            apiClient.get(`push_eventos&token=${token}`)
+            apiClient.get("readall_admin", { token, mes }),
+            apiClient.get("push_eventos", { token })
         ]);
 
-        adminStore.listaOriginal = Array.isArray(dadosAdmin)
-            ? dadosAdmin
-            : [];
-
-        adminStore.eventosPush = Array.isArray(eventosPush)
-            ? eventosPush
-            : [];
+        adminStore.listaOriginal = Array.isArray(dadosAdmin) ? dadosAdmin : [];
+        adminStore.eventosPush = Array.isArray(eventosPush) ? eventosPush : [];
 
         processar();
 
@@ -91,13 +89,12 @@ async function carregarDados() {
             "INFO"
         );
 
+        return true;
+
     } catch (err) {
-        UI.modal.show(
-            "ERRO",
-            err.message,
-            "❌",
-            "red"
-        );
+        UI.modal.show("ERRO", err.message, "❌", "red");
+        registrarLog("ADMIN_SYNC_ERRO", err.message, "ERRO");
+        return false;
     } finally {
         UI.loading.hide();
     }
@@ -161,9 +158,11 @@ async function dispararPushGlobal() {
         btn.disabled = true;
         btn.textContent = "ENVIANDO...";
 
-        const res = await apiClient.get(
-            `push_manual&token=${token}&mensagem=${encodeURIComponent(mensagem)}`
-        );
+        // Corrigido: mensagem como param, não embutida na action string
+        const res = await apiClient.get("push_manual", {
+            token,
+            mensagem: encodeURIComponent(mensagem)
+        });
 
         if (!res?.success) {
             throw new Error(res?.message || "Falha no envio");
@@ -182,6 +181,7 @@ async function dispararPushGlobal() {
 
     } catch (err) {
         UI.modal.show("ERRO", err.message, "❌", "red");
+        registrarLog("ADMIN_PUSH_ERRO", err.message, "ERRO");
     } finally {
         btn.disabled = false;
         btn.textContent = "ENVIAR DISPARO";
@@ -209,7 +209,22 @@ function sairPainel() {
 }
 
 /* ======================================
-   📦 RESTO (mantido, mas já consistente)
+   🔍 FILTRO
+====================================== */
+
+function renderFiltrado() {
+    const termo = document.getElementById("search")?.value?.toLowerCase() ?? "";
+
+    const filtrada = adminStore.listaOriginal.filter(v =>
+        v.nome?.toLowerCase().includes(termo) ||
+        String(v.matricula).includes(termo)
+    );
+
+    renderTabela(filtrada);
+}
+
+/* ======================================
+   📦 TABELA
 ====================================== */
 
 function renderTabela(lista) {
@@ -230,11 +245,9 @@ function renderTabela(lista) {
                 <b>${v.nome}</b><br>
                 <small>${v.matricula}</small>
             </td>
-
             <td style="text-align:center;">
                 ${v.total || 0}
             </td>
-
             <td style="text-align:center;color:${cor};font-weight:bold;">
                 ${s}
             </td>
@@ -262,7 +275,7 @@ function setText(id, v) {
 }
 
 /* ======================================
-   📈 CHART (inalterado estruturalmente)
+   📈 CHART
 ====================================== */
 
 async function garantirChartJS() {
@@ -277,15 +290,28 @@ async function garantirChartJS() {
     });
 }
 
-function renderChart() {
+function renderChart(lista = []) {
     const canvas = document.getElementById("chart");
     if (!canvas || !window.Chart) return;
 
     adminStore.grafico?.destroy();
 
+    // Labels e dados extraídos da lista real
+    const labels = lista.map(v => v.nome || v.matricula);
+    const valores = lista.map(v => v.total || 0);
+
     adminStore.grafico = new Chart(canvas, {
         type: "line",
-        data: { labels: [], datasets: [] }
+        data: {
+            labels,
+            datasets: [{
+                label: "Folgas",
+                data: valores,
+                borderColor: "#3498db",
+                tension: 0.3,
+                fill: false
+            }]
+        }
     });
 }
 
