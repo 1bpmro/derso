@@ -1,4 +1,4 @@
-// main.js - DERSO v9 CORE ENGINE 🧠⚙️
+// main.js - DERSO v9.1 CORE ENGINE 🧠⚙️ (SAFE UI BUILD)
 
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
@@ -24,10 +24,33 @@ const APP = {
     initialized: false,
     bootstrapTime: null,
     pushLocked: false,
-    error: null
+    error: null,
+    uiReady: false,
+    modalShown: false
 };
 
 window.__ADMIN_MODE__ = false;
+
+/* ======================================
+   🧯 EMERGENCY UI UNLOCK (ANTI TELA PRETA)
+====================================== */
+function forceUnlockUI() {
+    setTimeout(() => {
+        try {
+            UI.loading?.hide?.();
+
+            document.querySelectorAll(".modal").forEach(m => {
+                m.classList.add("is-hidden");
+            });
+
+            document.body.style.overflow = "auto";
+
+            registrarLog("SISTEMA", "UI unlock automático executado", "INFO");
+        } catch (e) {
+            console.error("UI unlock fail:", e);
+        }
+    }, 12000); // 12s safety net
+}
 
 /* ======================================
    🔐 GUARDS
@@ -42,9 +65,7 @@ function getMatricula() {
     if (cached) return cached;
 
     const input = DOM.matricula?.value?.trim();
-    if (input) {
-        localStorage.setItem("matricula_usuario", input);
-    }
+    if (input) localStorage.setItem("matricula_usuario", input);
 
     return input;
 }
@@ -57,30 +78,46 @@ function clearBadge() {
     navigator.clearAppBadge().catch(() => {});
 }
 
+/* ======================================
+   📲 INSTALL HINT (SAFE MODE)
+====================================== */
 function showInstallHint() {
+
     const standalone = window.matchMedia("(display-mode: standalone)").matches;
 
     if (standalone) return;
+    if (!APP.uiReady) return; // 🔥 evita travar loading
+
+    if (APP.modalShown) return;
 
     setTimeout(() => {
-        UI.modal.show(
-            "INSTALAÇÃO RECOMENDADA",
-            "Instale o DERSO para melhorar notificações e evitar perda de prazos.",
-            "📲",
-            "#1a3c6e"
-        );
+
+        try {
+            UI.modal.show(
+                "INSTALAÇÃO RECOMENDADA",
+                "Instale o DERSO para melhorar notificações e evitar perda de prazos.",
+                "📲",
+                "#1a3c6e"
+            );
+
+            APP.modalShown = true;
+
+        } catch (err) {
+            console.warn("Modal install falhou:", err);
+        }
+
     }, 5000);
 }
 
 /* ======================================
-   🌐 API LAYER
+   🌐 API
 ====================================== */
 async function loadInitialData() {
     return await apiClient.get("get_initial_data");
 }
 
 /* ======================================
-   🧠 STATE PIPELINE
+   🧠 STATE
 ====================================== */
 function hydrateState(data = {}) {
     STATE.employeeList = data.lista || {};
@@ -122,7 +159,7 @@ function restoreForm() {
 }
 
 /* ======================================
-   🔔 PUSH FLOW
+   🔔 PUSH
 ====================================== */
 async function registerPushIfPossible() {
     if (APP.pushLocked) return;
@@ -142,7 +179,7 @@ async function registerPushIfPossible() {
 }
 
 /* ======================================
-   🔐 ADMIN FLOW
+   🔐 ADMIN
 ====================================== */
 function initAdmin() {
     if (!hasAdminSession()) return;
@@ -150,7 +187,7 @@ function initAdmin() {
 }
 
 /* ======================================
-   🎯 FINALIZE INIT
+   🎯 FINAL INIT
 ====================================== */
 function finalizeInit() {
 
@@ -168,29 +205,30 @@ function finalizeInit() {
 
     registrarLog("SISTEMA", "Operacional", "SUCESSO");
 
-    showInstallHint();
+    APP.uiReady = true; // 🔥 UI liberada
 
     initAdmin();
     startPushFlow();
 
+    showInstallHint();
+
     APP.initialized = true;
+
+    forceUnlockUI(); // 🧯 fallback anti tela preta
 }
 
 /* ======================================
-   🔔 PUSH FLOW START
+   🔔 PUSH START
 ====================================== */
 function startPushFlow() {
     const mat = getMatricula();
-
     if (!mat) return;
 
-    setTimeout(() => {
-        registerPushIfPossible();
-    }, 3000);
+    setTimeout(registerPushIfPossible, 3000);
 }
 
 /* ======================================
-   ❌ ERROR HANDLER
+   ❌ ERROR
 ====================================== */
 function handleFatal(error) {
 
@@ -199,7 +237,9 @@ function handleFatal(error) {
     registrarLog("FALHA_CRITICA", error.message, "ERRO");
     console.error(error);
 
-    UI.loading.hide();
+    try {
+        UI.loading.hide();
+    } catch {}
 
     UI.modal.show(
         "ERRO DE CONEXÃO",
@@ -207,10 +247,12 @@ function handleFatal(error) {
         "📡",
         "red"
     );
+
+    forceUnlockUI(); // 🔥 garante que não fica preso
 }
 
 /* ======================================
-   🚀 BOOT SEQUENCE (PIPELINE CONTROLLED)
+   🚀 BOOT
 ====================================== */
 async function bootstrap() {
 
@@ -218,7 +260,7 @@ async function bootstrap() {
 
     clearBadge();
 
-    registrarLog("SISTEMA", "Boot v9 iniciado", "INFO");
+    registrarLog("SISTEMA", "Boot v9.1 iniciado", "INFO");
 
     if (!DOM.loading || !DOM.formContent) {
         console.error("DOM incompleto");
