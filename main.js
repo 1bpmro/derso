@@ -137,25 +137,38 @@ async function loadInitialData() {
    🧠 STATE
 ====================================== */
 function hydrateState(data = {}) {
-    // Limpa a lista atual sem quebrar a referência (mantendo o Seal feliz)
+    // 1. Limpa o estado atual sem quebrar o Object.seal
     for (let prop in STATE.employeeList) {
         delete STATE.employeeList[prop];
     }
 
-    // Verifica se a lista veio como Array e transforma em Objeto indexado
-    const listaOriginal = data.lista || [];
+    const fonte = data.lista || {};
+
+    // 2. Se a fonte for um OBJETO (formato atual do seu GAS)
+    if (fonte && typeof fonte === "object" && !Array.isArray(fonte)) {
+        
+        Object.entries(fonte).forEach(([matricula, dados]) => {
+            // Injetamos a matrícula dentro do objeto para o events.js encontrar fácil
+            STATE.employeeList[matricula] = {
+                matricula: matricula,
+                nome: dados.nome || "",
+                niver: dados.niver || ""
+            };
+        });
+
+        const total = Object.keys(STATE.employeeList).length;
+        registrarLog("SISTEMA", `Lista hidratada: ${total} militares (Dicionário)`, "INFO");
+    } 
     
-    if (Array.isArray(listaOriginal)) {
-        listaOriginal.forEach(militar => {
-            // Usa a matrícula como CHAVE para busca rápida
-            if (militar.matricula) {
-                STATE.employeeList[militar.matricula] = militar;
+    // 3. Se a fonte for um ARRAY (fallback de segurança)
+    else if (Array.isArray(fonte)) {
+        fonte.forEach(militar => {
+            const m = militar.matricula || militar.MATRICULA;
+            if (m) {
+                STATE.employeeList[m] = militar;
             }
         });
-        registrarLog("SISTEMA", `Lista hidratada: ${listaOriginal.length} militares`, "INFO");
-    } else {
-        // Se já for um objeto, apenas mescla
-        Object.assign(STATE.employeeList, listaOriginal);
+        registrarLog("SISTEMA", `Lista hidratada: ${fonte.length} militares (Array)`, "INFO");
     }
 
     STATE.userScore = data.score || 0;
