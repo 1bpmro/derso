@@ -80,4 +80,20 @@ export function post(action, body = {}) {
     });
 }
 
-export const apiClient = { get, post };
+/* =========================
+   POST FORM (sem action)
+========================= */
+export function postForm(formLike) {
+    const body =
+        formLike instanceof URLSearchParams ||
+        formLike instanceof FormData
+            ? formLike
+            : new URLSearchParams(formLike || {});
+
+    return request(CONFIG.API_URL, {
+        method: "POST",
+        body
+    });
+}
+
+export const apiClient = { get, post, postForm };
