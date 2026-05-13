@@ -23,6 +23,14 @@ import { apiClient } from "./core/apiClient.js";
 window.__ADMIN_MODE__ = false;
 
 /* ======================================
+   🧠 ADMIN GUARD (SEGURANÇA LEVE)
+====================================== */
+function canEnableAdminAccess() {
+    const token = localStorage.getItem("adminToken");
+    return Boolean(token && token.length > 10);
+}
+
+/* ======================================
    🧪 DEBUG LOCAL
 ====================================== */
 function isLocalhost() {
@@ -178,8 +186,13 @@ function processarDadosIniciais(result = {}) {
 function finalizarInicializacao() {
     applyInstitutionalTheme();
     updateFooter();
+
+    // 🔐 SÓ ativa admin se houver sessão válida
+    if (canEnableAdminAccess()) {
+        configurarAcessoAdmin();
+    }
+
     setupEvents();
-    configurarAcessoAdmin();
     restaurarCamposFormulario();
 
     UI.loading.hide();
