@@ -25,7 +25,7 @@
 
     <div id="barraProgresso"></div>
 
-    <!-- HEADER -->
+    <!-- HEADER MAIS "PESADO" VISUALMENTE -->
     <header class="header">
         <div class="logos">
             <img src="https://rondonia.ro.gov.br/wp-content/uploads/2024/09/Brasao-PMRO-370x523.png">
@@ -47,7 +47,7 @@
         <p id="loadingText">Sincronizando dados com o sistema...</p>
     </div>
 
-    <!-- FORMULARIO (SEU CORPO PRINCIPAL - INTATO) -->
+    <!-- FORM CONTAINER (AQUI ESTÁ O SEGREDO DO VISUAL) -->
     <div id="formContent" class="is-hidden">
 
         <section id="prazoBox">
@@ -55,7 +55,7 @@
             <div id="timerDisplay">⌛ CALCULANDO PRAZO...</div>
 
             <div id="consultaFechada" class="is-hidden">
-                <input type="text" id="matriculaConsulta" placeholder="Matrícula p/ consulta" inputmode="numeric">
+                <input type="text" id="matriculaConsulta" placeholder="Matrícula para consulta" inputmode="numeric">
 
                 <button type="button" class="btn btn-outline" id="btnHistoryFechado">
                     📂 VER MINHAS SOLICITAÇÕES
@@ -65,6 +65,7 @@
 
         <div id="instMessage"></div>
 
+        <!-- FORMULÁRIO "CARDIZADO" -->
         <form id="dersoForm">
 
             <div class="form-group">
@@ -108,26 +109,28 @@
                 <small id="infoPeriodo"></small>
             </div>
 
-            <button type="button" class="btn btn-outline" id="btnHistory">
-                📂 VER MINHAS SOLICITAÇÕES
-            </button>
+            <!-- BOTÕES COM MAIS PESO VISUAL -->
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btnHistory">
+                    📂 VER MINHAS SOLICITAÇÕES
+                </button>
 
-            <button type="submit" class="btn btn-primary" id="btnEnviar">
-                ENVIAR SOLICITAÇÃO
-            </button>
+                <button type="submit" class="btn btn-primary">
+                    ENVIAR SOLICITAÇÃO
+                </button>
+            </div>
 
         </form>
     </div>
 
-    <!-- FOOTER (IMPORTANTE PRO ADMIN UNLOCK) -->
     <footer class="footer" id="footerText"></footer>
 
 </div>
 
-<!-- MODAL NORMAL -->
+<!-- MODAL -->
 <div id="modalMsg" class="modal is-hidden"></div>
 
-<!-- MODAL ADMIN (ligado ao adminAccess.js) -->
+<!-- ADMIN -->
 <div id="adminLoginModal" class="modal is-hidden">
     <div class="modal-content">
 
@@ -144,10 +147,8 @@
     </div>
 </div>
 
-<!-- 🚀 SISTEMA CENTRAL -->
 <script type="module" src="main.js"></script>
 
-<!-- PWA -->
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
