@@ -82,26 +82,20 @@ function clearBadge() {
    📲 INSTALL HINT (Otimizado)
 ====================================== */
 function showInstallHint() {
-    // 1. Não incomoda quem já instalou
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches 
-                         || window.navigator.standalone === true;
-    if (isStandalone) return;
-
-    // 2. Não incomoda quem já viu nesta sessão
-    if (APP.modalShown) return;
+    // 1. Bloqueios básicos (Standalone ou já mostrado)
+    if (window.matchMedia("(display-mode: standalone)").matches || APP.modalShown) return;
 
     const tryShow = () => {
-        // Verifica se a UI está pronta E se o loading já sumiu do mapa
-        const loadingAtivo = document.querySelector(".loading:not(.is-hidden)");
-        
-        if (!APP.uiReady || loadingAtivo || !UI?.modal?.show) {
-            return false;
-        }
+        // 2. Só mostra se o Loading REALMENTE sumiu
+        const loadingElement = document.getElementById("loading"); // Ou o ID que você usa
+        const isStillLoading = loadingElement && !loadingElement.classList.contains("is-hidden");
+
+        if (isStillLoading || !APP.uiReady) return false;
 
         try {
             UI.modal.show(
-                "DERSO NO CELULAR",
-                "Para receber alertas de escala e não perder prazos, adicione o DERSO à sua tela inicial.",
+                "DERSO NO CELULAR 📲",
+                "Para não perder prazos e receber alertas de escala, instale o app na sua tela inicial.",
                 "📲",
                 "#1a3c6e"
             );
@@ -109,20 +103,24 @@ function showInstallHint() {
             registrarLog("SISTEMA", "Prompt de instalação exibido", "INFO");
             return true;
         } catch (e) {
-            console.error("Erro ao abrir modal de instalação:", e);
             return false;
         }
     };
 
-    // Tenta mostrar com um pequeno delay de segurança
+    // 3. O PULO DO GATO: Espera 3 segundos após o Boot total
+    // Isso garante que o usuário já viu a tela carregada antes do pop-up
     setTimeout(() => {
         if (!tryShow()) {
-            // Se falhou (ex: loading ainda na tela), tenta uma última vez em 5s
-            setTimeout(tryShow, 5000);
+            // Se falhou (ex: loading demorou), tenta de novo em 5s
+            const retry = setInterval(() => {
+                if (tryShow()) clearInterval(retry);
+            }, 5000);
+            
+            // Não deixa o intervalo rodar pra sempre
+            setTimeout(() => clearInterval(retry), 30000);
         }
-    }, 500);
+    }, 3000); 
 }
-
 /* ======================================
    🌐 API
 ====================================== */
