@@ -2,11 +2,12 @@
 import { CONFIG } from "./config.js";
 import { registrarLog } from "../services/logger.js";
 
-const DEFAULT_TIMEOUT = 10000;
-const POST_TIMEOUT = 15000;
-const MAX_RETRY = 2;
-const RETRY_DELAY_MS = 500;
+import { CONFIG } from "./config.js";
 
+const DEFAULT_TIMEOUT = CONFIG.TIMEOUT_FETCH;
+const POST_TIMEOUT = CONFIG.TIMEOUT_POST;
+const MAX_RETRY = CONFIG.RETRY_MAX;
+const RETRY_DELAY_MS = CONFIG.RETRY_DELAY_MS;
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
