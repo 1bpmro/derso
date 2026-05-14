@@ -2,6 +2,7 @@
 
 import { apiClient } from "../core/apiClient.js";
 import { canOpenAdmin } from "../core/adminGuard.js";
+import { sanitizarHTML } from "../core/utils.js";
 
 let emLogin = false;
 
@@ -51,7 +52,7 @@ async function login() {
             localStorage.setItem("adminToken", data.token);
 
             // Corrigido: sanitiza nome antes de usar no HTML
-            const nomeSeguro = String(data.nome ?? "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const nomeSeguro = sanitizarHTML(data.nome);
             localStorage.setItem("adminNome", nomeSeguro);
 
             localStorage.removeItem("ADMIN_UNLOCK");
