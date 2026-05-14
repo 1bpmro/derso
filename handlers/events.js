@@ -109,12 +109,6 @@ function atualizarSugestoesEmail(valor, datalist) {
     datalist.appendChild(fragment);
 }
 
-function validarEmail(valor) {
-    if (!DOM.email) return;
-    const valido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
-    DOM.email.classList.toggle("valido", valido);
-}
-
 /* ======================================
    👮 MATRÍCULA
 ====================================== */
