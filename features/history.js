@@ -3,6 +3,7 @@ import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 import { UI } from "../ui/manager.js";
 import { apiClient } from "../core/apiClient.js";
+import { isArrayValido } from "../core/utils.js";
 
 export async function fetchHistory(mat) {
     const matricula = (mat || "").trim();
@@ -28,7 +29,7 @@ export async function fetchHistory(mat) {
             throw new Error(r.error);
         }
 
-        const lista = Array.isArray(r?.dados) ? r.dados : [];
+        const lista = isArrayValido(r?.dados) ? r.dados : [];
         const nome = r?.nome || "REGISTROS";
 
         if (lista.length === 0) {
