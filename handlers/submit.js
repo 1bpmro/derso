@@ -6,7 +6,7 @@ import { STATE } from "../core/state.js";
 import { registrarLog } from "../services/logger.js";
 import { limparRascunho } from "../services/storage.js";
 import { UI } from "../ui/manager.js";
-import { normalizarMatricula } from "../core/utils.js";
+import { normalizarMatricula, estaEmCooldown } from "../core/utils.js";
 
 /* ======================================
    🚫 CONTROLE DE ENVIO
@@ -55,16 +55,11 @@ export async function handleSubmit(e) {
 
     const agora = Date.now();
 
-    if (agora - STATE.ultimoEnvio < 3000) {
-        registrarLog("BLOQUEIO", "Tentativa muito rápida", "AVISO");
-        UI.modal.show(
-            "AGUARDE",
-            "Espere alguns segundos antes de enviar novamente.",
-            "⏳",
-            "orange"
-        );
-        return;
-    }
+    if (estaEmCooldown(STATE.ultimoEnvio, 3000)) {
+    registrarLog("BLOQUEIO", "Tentativa muito rápida", "AVISO");
+    UI.modal.show("AGUARDE", "Espere alguns segundos antes de enviar novamente.", "⏳", "orange");
+    return;
+}
 
     const matriculaLog = matriculaLimpa || "N/A";
 
