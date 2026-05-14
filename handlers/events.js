@@ -9,25 +9,13 @@ import { apiClient } from "../core/apiClient.js";
 import { UI } from "../ui/manager.js";
 import { applyInstitutionalTheme } from "../services/theme.js";
 import { fetchHistory } from "../features/history.js";
+import { normalizarMatricula, validarEmail, sanitizarHTML } from "../core/utils.js";
 
 /* ======================================
    🧠 CONTROLE INTERNO
 ====================================== */
 
 let eventosRegistrados = false;
-
-/* ======================================
-   🛠️ UTILITÁRIO: normalizar matrícula
-====================================== */
-
-function normalizarMatricula(valor) {
-    let raw = String(valor || "").trim().replace(/\D/g, "");
-    if (!raw) return "";
-    if (!raw.startsWith("1000")) {
-        raw = `1000${raw}`;
-    }
-    return raw;
-}
 
 /* ======================================
    🚀 SETUP PRINCIPAL
@@ -99,7 +87,7 @@ function setupEmailValidation() {
     DOM.email.addEventListener("input", (e) => {
         const valor = e.target.value.trim();
         atualizarSugestoesEmail(valor, datalist);
-        validarEmail(valor);
+        DOM.email.classList.toggle("valido", validarEmail(valor));
         UI.updateProgress();
     });
 }
