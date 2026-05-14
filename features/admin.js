@@ -4,6 +4,7 @@ import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 import { UI } from "../ui/manager.js";
 import { apiClient } from "../core/api.js";
+import { isArrayValido } from "../core/utils.js";
 
 /* ======================================
    🧠 STORE
@@ -78,8 +79,8 @@ async function carregarDados() {
             apiClient.get("push_eventos", { token })
         ]);
 
-        adminStore.listaOriginal = Array.isArray(dadosAdmin) ? dadosAdmin : [];
-        adminStore.eventosPush = Array.isArray(eventosPush) ? eventosPush : [];
+       adminStore.listaOriginal = isArrayValido(dadosAdmin) ? dadosAdmin : [];
+       adminStore.eventosPush = isArrayValido(eventosPush) ? eventosPush : [];
 
         processar();
 
