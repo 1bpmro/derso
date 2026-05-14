@@ -2,16 +2,11 @@
 
 import { DOM } from "../core/dom.js";
 import { apiClient } from "../core/apiClient.js";
-
 import { STATE } from "../core/state.js";
-
 import { registrarLog } from "../services/logger.js";
-
-import {
-    limparRascunho
-} from "../services/storage.js";
-
+import { limparRascunho } from "../services/storage.js";
 import { UI } from "../ui/manager.js";
+import { normalizarMatricula } from "../core/utils.js";
 
 /* ======================================
    🚫 CONTROLE DE ENVIO
@@ -24,7 +19,6 @@ let envioEmAndamento = false;
 ====================================== */
 
 export async function handleSubmit(e) {
-
     e.preventDefault();
 
     /* ================================
@@ -32,37 +26,19 @@ export async function handleSubmit(e) {
     ================================ */
 
     if (envioEmAndamento) {
-
-        registrarLog(
-            "BLOQUEIO",
-            "Tentativa de envio simultâneo",
-            "AVISO"
-        );
-
+        registrarLog("BLOQUEIO", "Tentativa de envio simultâneo", "AVISO");
         return;
     }
 
     /* ================================
        🔒 NORMALIZA MATRÍCULA
+       Corrigido: usa utilitário centralizado
     ================================ */
 
-    let matriculaLimpa =
-        DOM.matricula?.value
-            .trim()
-            .replace(/\D/g, "");
-
-    if (
-        matriculaLimpa &&
-        matriculaLimpa.length <= 6 &&
-        !matriculaLimpa.startsWith("1000")
-    ) {
-        matriculaLimpa =
-            `1000${matriculaLimpa}`;
-    }
+    const matriculaLimpa = normalizarMatricula(DOM.matricula?.value);
 
     if (DOM.matricula) {
-        DOM.matricula.value =
-            matriculaLimpa;
+        DOM.matricula.value = matriculaLimpa;
     }
 
     /* ================================
@@ -70,11 +46,7 @@ export async function handleSubmit(e) {
     ================================ */
 
     if (matriculaLimpa) {
-
-        localStorage.setItem(
-            "matricula_usuario",
-            matriculaLimpa
-        );
+        localStorage.setItem("matricula_usuario", matriculaLimpa);
     }
 
     /* ================================
@@ -83,78 +55,48 @@ export async function handleSubmit(e) {
 
     const agora = Date.now();
 
-    if (
-        agora - STATE.ultimoEnvio < 3000
-    ) {
-
-        registrarLog(
-            "BLOQUEIO",
-            "Tentativa muito rápida",
-            "AVISO"
-        );
-
+    if (agora - STATE.ultimoEnvio < 3000) {
+        registrarLog("BLOQUEIO", "Tentativa muito rápida", "AVISO");
         UI.modal.show(
             "AGUARDE",
             "Espere alguns segundos antes de enviar novamente.",
             "⏳",
             "orange"
         );
-
         return;
     }
 
-    const matriculaLog =
-        matriculaLimpa || "N/A";
+    const matriculaLog = matriculaLimpa || "N/A";
 
-    registrarLog(
-        "ENVIO",
-        `Iniciando envio: ${matriculaLog}`,
-        "INFO"
-    );
+    registrarLog("ENVIO", `Iniciando envio: ${matriculaLog}`, "INFO");
 
     envioEmAndamento = true;
-
     UI.feedback.lockForm();
-
-    UI.loading.show(
-        "ENVIANDO SOLICITAÇÃO..."
-    );
+    UI.loading.show("ENVIANDO SOLICITAÇÃO...");
 
     try {
 
         /* ================================
-           📦 FORM DATA
+           📦 MONTA BODY PARA POST
+           Corrigido: apiClient.post em vez de postForm inexistente
         ================================ */
 
-        const formData =
-            new FormData(DOM.form);
+        const formData = new FormData(DOM.form);
+        formData.set("matricula", matriculaLimpa);
 
-        // 🔥 garante matrícula normalizada
-        formData.set(
-            "matricula",
-            matriculaLimpa
-        );
+        const body = {};
+        formData.forEach((v, k) => { body[k] = v; });
 
-        const body = new URLSearchParams(formData);
-        const result = await apiClient.postForm(body);
+        const result = await apiClient.post("submit", body);
 
         /* ================================
            ✅ SUCESSO
         ================================ */
 
-        if (
-            result.success ||
-            result.result === "success"
-        ) {
+        if (result.success || result.result === "success") {
+            STATE.ultimoEnvio = Date.now();
 
-            STATE.ultimoEnvio =
-                Date.now();
-
-            registrarLog(
-                "SUCESSO",
-                `Solicitação registrada: ${matriculaLog}`,
-                "SUCESSO"
-            );
+            registrarLog("SUCESSO", `Solicitação registrada: ${matriculaLog}`, "SUCESSO");
 
             UI.modal.show(
                 "SUCESSO!",
@@ -164,11 +106,7 @@ export async function handleSubmit(e) {
             );
 
             limparFormulario();
-
-            UI.feedback.flash(
-                DOM.form
-            );
-
+            UI.feedback.flash(DOM.form);
             UI.feedback.scrollToTop();
 
             return;
@@ -181,23 +119,16 @@ export async function handleSubmit(e) {
         tratarErroServidor(result);
 
     } catch (error) {
-
         console.error(error);
 
-        registrarLog(
-            "ERRO_CRITICO",
-            error.message,
-            "ERRO"
-        );
+        registrarLog("ERRO_CRITICO", error.message, "ERRO");
 
-        UI.feedback.shake(
-            DOM.form
-        );
+        UI.feedback.shake(DOM.form);
 
-        const mensagem =
-            error.name === "AbortError"
-                ? "O servidor demorou para responder."
-                : "Não foi possível enviar sua solicitação.";
+        // Corrigido: apiClient lança "Timeout na requisição", não AbortError
+        const mensagem = error.message === "Timeout na requisição"
+            ? "O servidor demorou para responder."
+            : "Não foi possível enviar sua solicitação.";
 
         UI.modal.show(
             "ERRO DE CONEXÃO",
@@ -208,9 +139,7 @@ export async function handleSubmit(e) {
 
     } finally {
         envioEmAndamento = false;
-
         UI.feedback.unlockForm();
-
         UI.loading.hide();
     }
 }
@@ -220,20 +149,13 @@ export async function handleSubmit(e) {
 ====================================== */
 
 function limparFormulario() {
-
     if (!DOM.form) return;
 
     DOM.form.reset();
-
     limparRascunho();
-
     UI.updateProgress();
 
-    registrarLog(
-        "FORM_RESET",
-        "Formulário limpo",
-        "INFO"
-    );
+    registrarLog("FORM_RESET", "Formulário limpo", "INFO");
 }
 
 /* ======================================
@@ -241,28 +163,13 @@ function limparFormulario() {
 ====================================== */
 
 function tratarErroServidor(response) {
+    const mensagem = response?.message || "Falha desconhecida.";
 
-    const mensagem =
-        response?.message ||
-        "Falha desconhecida.";
+    registrarLog("ENVIO_NEGADO", mensagem, "AVISO");
 
-    registrarLog(
-        "ENVIO_NEGADO",
-        mensagem,
-        "AVISO"
-    );
+    const texto = mensagem.toLowerCase();
 
-    const texto =
-        mensagem.toLowerCase();
-
-    /* ================================
-       🚫 DUPLICIDADE
-    ================================ */
-
-    if (
-        texto.includes("duplicado") ||
-        texto.includes("já existe")
-    ) {
+    if (texto.includes("duplicado") || texto.includes("já existe")) {
         UI.modal.show(
             "SOLICITAÇÃO DUPLICADA",
             "Já existe solicitação para esta data/tipo. Verifique seu histórico.",
@@ -272,15 +179,7 @@ function tratarErroServidor(response) {
         return;
     }
 
-    /* ================================
-       📅 PERÍODO FECHADO
-    ================================ */
-
-    if (
-        texto.includes("prazo") ||
-        texto.includes("fechado") ||
-        texto.includes("bloqueado")
-    ) {
+    if (texto.includes("prazo") || texto.includes("fechado") || texto.includes("bloqueado")) {
         UI.modal.show(
             "PRAZO ENCERRADO",
             "O período para solicitação desta data está fechado.",
@@ -290,14 +189,5 @@ function tratarErroServidor(response) {
         return;
     }
 
-    /* ================================
-       ❌ ERRO GENÉRICO
-    ================================ */
-
-    UI.modal.show(
-        "ERRO",
-        mensagem,
-        "❌",
-        "red"
-    );
+    UI.modal.show("ERRO", mensagem, "❌", "red");
 }
