@@ -3,7 +3,7 @@ import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 import { UI } from "../ui/manager.js";
 import { apiClient } from "../core/apiClient.js";
-import { isArrayValido } from "../core/utils.js";
+import { isArrayValido, sanitizarHTML } from "../core/utils.js";
 
 export async function fetchHistory(mat) {
     const matricula = (mat || "").trim();
@@ -71,8 +71,10 @@ function buildHistoryHTML(lista) {
     return `
         <div style="max-height: 320px; overflow-y: auto; padding-right: 6px;">
             ${lista.map(i => {
-                const data = i?.data || "Sem data";
-                const tipo = i?.folga || i?.tipo || "Registro";
+                // Sanitização aplicada nos dados vindos da API
+                const data = sanitizarHTML(i?.data || "Sem data");
+                const tipo = sanitizarHTML(i?.folga || i?.tipo || "Registro");
+                
                 return `
                     <div style="
                         display:flex;
