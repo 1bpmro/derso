@@ -550,6 +550,8 @@ document.addEventListener(
 /* ======================================
    🧪 DEBUG
 ====================================== */
-window.STATE = STATE;
-window.apiClient = apiClient;
-window.DERSO_STATE = STATE;
+if (CONFIG.DEBUG) {
+    window.STATE = STATE;
+    window.apiClient = apiClient;
+    window.DERSO_STATE = STATE;
+}
