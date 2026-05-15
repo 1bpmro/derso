@@ -3,7 +3,7 @@
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
 import { UI } from "../ui/manager.js";
-import { apiClient } from "../core/api.js";
+import { apiClient } from "../core/apiClient.js";
 import { isArrayValido } from "../core/utils.js";
 
 /* ======================================
