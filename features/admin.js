@@ -40,7 +40,36 @@ export async function iniciarPainelAdmin() {
 
         container.innerHTML = gerarHTMLAdmin();
 
-        bindEventos();
+        function exportCSV() {
+    if (!adminStore.listaOriginal.length) {
+        UI.modal.show("AVISO", "Nenhum dado para exportar.", "⚠️", "orange");
+        return;
+    }
+
+    const linhas = [
+        ["Matrícula", "Nome", "Total", "Score"],
+        ...adminStore.listaOriginal.map(v => [
+            v.matricula,
+            v.nome,
+            v.total || 0,
+            adminStore.scoreMap[v.matricula] ?? 0
+        ])
+    ];
+
+    const csv = linhas
+        .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `derso_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+       
+       bindEventos();
 
         const ok = await carregarDados();
 
