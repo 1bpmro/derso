@@ -1,5 +1,6 @@
 // ui/manager.js
 import { DOM } from "../core/dom.js";
+import { CONFIG } from "../core/config.js";
 
 /* ======================================
    🎛️ UI MANAGER
