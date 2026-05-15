@@ -384,8 +384,7 @@ function finalizeInit() {
 
     // 🎨 tema
     applyInstitutionalTheme();
-    applyDarkModeStyles();
-
+ 
     // 📎 footer
     updateFooter();
 
