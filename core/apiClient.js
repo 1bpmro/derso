@@ -68,15 +68,22 @@ export function get(action, params = {}) {
 /* =========================
    POST
 ========================= */
+/* =========================
+   POST
+========================= */
 export function post(action, body = {}) {
-    const formData = new FormData();
-    formData.append("action", action);
-    Object.entries(body).forEach(([k, v]) => {
-        formData.append(k, v);
-    });
+
+    const payload = {
+        action,
+        ...body
+    };
+
     return request(CONFIG.API_URL, {
         method: "POST",
-        body: formData
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
     });
 }
 
