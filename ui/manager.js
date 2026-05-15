@@ -206,5 +206,6 @@ export const UI = {
     }
 };
 
-// Exporta para o escopo global apenas para facilitar o debug via console
-window.UI = UI;
+if (CONFIG.DEBUG) {
+    window.UI = UI;
+}
