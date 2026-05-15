@@ -76,13 +76,15 @@ export async function handleSubmit(e) {
            Corrigido: apiClient.post em vez de postForm inexistente
         ================================ */
 
-        const formData = new FormData(DOM.form);
-        formData.set("matricula", matriculaLimpa);
-
-        const body = {};
-        formData.forEach((v, k) => { body[k] = v; });
-
-        const result = await apiClient.post("submit", body);
+   const formData = new FormData(DOM.form);
+       formData.set("matricula", matriculaLimpa);
+       
+       const body = {};
+       formData.forEach((v, k) => { body[k] = v; });
+       // Remove a action do body se vier do form — apiClient.post adiciona sozinho
+       delete body.action;
+       
+       const result = await apiClient.post("submit", body);
 
         /* ================================
            ✅ SUCESSO
