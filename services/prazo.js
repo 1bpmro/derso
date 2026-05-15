@@ -123,14 +123,9 @@ export function monitorarPrazos(
             setEstadoVisual("estado-inspecao");
 
             atualizarTimer(
-                abertura - agora,
-                `
-                <b style="color:#1A3C6E">
-                    ESTAMOS PASSANDO EM INSPEÇÃO AO CÓDIGO.
-                </b><br>
-                Voltamos em:
-                `
-            );
+    abertura - agora,
+    `<b style="color:#1A3C6E">ESTAMOS PASSANDO EM INSPEÇÃO AO CÓDIGO</b><br>Abertura em:`
+);
         }
 
         /* ======================================
