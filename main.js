@@ -7,10 +7,7 @@ import { DOM } from "./core/dom.js";
 import { UI } from "./ui/manager.js";
 import { registrarLog } from "./services/logger.js";
 
-import {
-    applyInstitutionalTheme,
-    applyDarkModeStyles
-} from "./services/theme.js";
+import { applyInstitutionalTheme } from "./services/theme.js";
 
 import { monitorarPrazos } from "./services/prazo.js";
 import { updateFooter } from "./services/footer.js";
