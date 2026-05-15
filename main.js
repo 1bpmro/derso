@@ -34,8 +34,6 @@ const APP = {
     modalShown: false
 };
 
-window.__ADMIN_MODE__ = false;
-
 /* ======================================
    🧯 EMERGENCY UI UNLOCK
 ====================================== */
