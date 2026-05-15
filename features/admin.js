@@ -358,5 +358,56 @@ function erroHTML(msg) {
 }
 
 function gerarHTMLAdmin() {
-    return `<div>Admin carregado</div>`;
+    const mesAtual = new Date().getMonth() + 1;
+    const opcoesMes = Array.from({ length: 12 }, (_, i) => {
+        const v = String(i + 1).padStart(2, "0");
+        const nomes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+        return `<option value="${v}"${i + 1 === mesAtual ? " selected" : ""}>${nomes[i]}</option>`;
+    }).join("");
+
+    return `
+    <div class="admin-wrapper">
+        <div class="admin-header">
+            <h3 style="margin:0;color:var(--azul-marinho)">📊 DERSO Admin</h3>
+            <button class="btn-exit" id="btnExit">Sair</button>
+        </div>
+
+        <div class="admin-stats">
+            <div class="stat-box"><span id="kpiTotal">—</span><label>Militares</label></div>
+            <div class="stat-box"><span id="kpiFolgas">—</span><label>Solicitações</label></div>
+            <div class="stat-box"><span id="kpiPush">—</span><label>Pushs enviados</label></div>
+            <div class="stat-box" style="grid-column:span 1">
+                <select id="mes" class="admin-input">${opcoesMes}</select>
+                <label>Mês</label>
+            </div>
+        </div>
+
+        <div class="admin-tools">
+            <input id="search" class="admin-input" placeholder="Buscar militar...">
+            <button class="btn-export" id="export">CSV</button>
+            <button class="btn-export" id="refresh" style="background:#3498db">↻</button>
+        </div>
+
+        <div class="admin-tools" style="margin-bottom:15px">
+            <input id="pushMsg" class="admin-input" placeholder="Mensagem push global...">
+            <button class="btn-export" id="btnSendPush" style="background:#8e44ad;white-space:nowrap">
+                ENVIAR DISPARO
+            </button>
+        </div>
+
+        <div class="admin-table-scroll">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Militar</th>
+                        <th style="text-align:center">Total</th>
+                        <th style="text-align:center">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="table"></tbody>
+            </table>
+        </div>
+
+        <canvas id="chart" style="margin-top:20px;max-width:100%"></canvas>
+    </div>`;
 }
