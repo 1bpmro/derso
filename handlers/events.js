@@ -189,39 +189,82 @@ function setupModal() {
 ====================================== */
 
 async function abrirPortaAdmin() {
+
     const login = prompt("🛡️ SISTEMA DERSO\n\nIdentifique-se:");
     if (!login) return;
 
     const senha = prompt("Digite sua senha:");
     if (!senha) return;
 
-    UI.loading.show("Autenticando...");
+    UI.loading.show("Autenticando administrador...");
 
     try {
-        // Corrigido: POST via apiClient — credenciais fora da URL
-        const result = await apiClient.post("adminlogin", {
-            matricula: login,
-            senha
+
+        const result = await apiClient.post("", {
+            action: "adminlogin",
+            matricula: String(login).trim(),
+            senha: String(senha).trim()
         });
 
-        if (result?.autorizado) {
-            localStorage.setItem("adminToken", result.token);
+        console.log("ADMIN LOGIN RESPONSE:", result);
 
-            registrarLog("ADMIN", `Acesso autorizado: ${result.nome}`, "SUCESSO");
+        if (result?.autorizado === true) {
 
-            const { iniciarPainelAdmin } = await import("../features/admin.js");
+            localStorage.setItem("adminToken", result.token || "TOKEN_OK");
+
+            registrarLog(
+                "ADMIN",
+                `Acesso autorizado: ${result.nome}`,
+                "SUCESSO"
+            );
+
+            UI.modal.show(
+                "ACESSO LIBERADO",
+                `Bem-vindo, ${result.nome}`,
+                "🛡️",
+                "#2E7D32"
+            );
+
+            const { iniciarPainelAdmin } =
+                await import("../features/admin.js");
+
             await iniciarPainelAdmin();
 
         } else {
-            registrarLog("SEGURANÇA", `Falha login admin: ${login}`, "ERRO");
-            UI.modal.show("ACESSO NEGADO", "Credenciais inválidas.", "🚫", "red");
+
+            registrarLog(
+                "SEGURANÇA",
+                `Falha login admin: ${login}`,
+                "ERRO"
+            );
+
+            UI.modal.show(
+                "ACESSO NEGADO",
+                "Credenciais inválidas.",
+                "🚫",
+                "red"
+            );
         }
 
     } catch (error) {
-        console.error(error);
-        registrarLog("ADMIN", error.message, "ERRO");
-        UI.modal.show("ERRO", "Falha ao autenticar administrador.", "📡", "red");
+
+        console.error("ADMIN LOGIN ERROR:", error);
+
+        registrarLog(
+            "ADMIN",
+            error.message || "Erro desconhecido",
+            "ERRO"
+        );
+
+        UI.modal.show(
+            "ERRO",
+            "Falha ao conectar com servidor.",
+            "📡",
+            "red"
+        );
+
     } finally {
+
         UI.loading.hide();
     }
 }
