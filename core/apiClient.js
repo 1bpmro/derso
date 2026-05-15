@@ -33,7 +33,6 @@ async function request(url, options = {}, retry = 0) {
         }
     } catch (err) {
         const isTimeout = err.name === "AbortError";
-        const isNetworkError = isTimeout || err.message === "Failed to fetch";
         const isHttpError = err.message.startsWith("HTTP ");
 
         registrarLog(
@@ -46,6 +45,10 @@ async function request(url, options = {}, retry = 0) {
         if (!isHttpError && retry < MAX_RETRY) {
             await sleep(RETRY_DELAY_MS * (retry + 1)); // backoff simples
             return request(url, options, retry + 1);
+        }
+
+        if (isTimeout) {
+            throw new Error("Timeout na requisição");
         }
 
         throw err;
