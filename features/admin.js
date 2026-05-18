@@ -1,4 +1,4 @@
-// features/admin.js (v2 refatorado e alinhado ao core/api)
+// features/admin.js (v2.1 - Escopo corrigido e alinhado ao core/api)
 
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
@@ -7,7 +7,7 @@ import { apiClient } from "../core/apiClient.js";
 import { isArrayValido } from "../core/utils.js";
 
 /* ======================================
-   🧠 STORE
+   🧠 STORE INTERNA
 ====================================== */
 
 const adminStore = {
@@ -22,7 +22,7 @@ const adminStore = {
 const getToken = () => localStorage.getItem("adminToken");
 
 /* ======================================
-   🚀 INIT
+   🚀 INIT PRINCIPAL
 ====================================== */
 
 export async function iniciarPainelAdmin() {
@@ -39,47 +39,16 @@ export async function iniciarPainelAdmin() {
         await garantirChartJS();
 
         container.innerHTML = gerarHTMLAdmin();
-
-        function exportCSV() {
-    if (!adminStore.listaOriginal.length) {
-        UI.modal.show("AVISO", "Nenhum dado para exportar.", "⚠️", "orange");
-        return;
-    }
-
-    const linhas = [
-        ["Matrícula", "Nome", "Total", "Score"],
-        ...adminStore.listaOriginal.map(v => [
-            v.matricula,
-            v.nome,
-            v.total || 0,
-            adminStore.scoreMap[v.matricula] ?? 0
-        ])
-    ];
-
-    const csv = linhas
-        .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))
-        .join("\n");
-
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `derso_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
        
-       bindEventos();
+        // Vincula as escutas de eventos agora que o HTML existe
+        bindEventos();
 
         const ok = await carregarDados();
 
         if (ok) {
             adminStore.carregado = true;
-            registrarLog("ADMIN", "Painel iniciado", "SUCESSO");
+            registrarLog("ADMIN", "Painel iniciado com sucesso", "SUCESSO");
         }
-
-        // Não expor via window — apenas registrar internamente
-        // window.__ADMIN_MODE__ foi removido por segurança
 
     } catch (err) {
         container.innerHTML = erroHTML(err.message);
@@ -90,7 +59,7 @@ export async function iniciarPainelAdmin() {
 }
 
 /* ======================================
-   📦 DADOS (VIA API CLIENT — params separados)
+   📦 OPERAÇÕES COM DADOS
 ====================================== */
 
 async function carregarDados() {
@@ -102,14 +71,13 @@ async function carregarDados() {
     try {
         UI.loading.show("Sincronizando painel...");
 
-        // Corrigido: token e mes como params, não embutidos na action string
         const [dadosAdmin, eventosPush] = await Promise.all([
             apiClient.get("readall_admin", { token, mes }),
             apiClient.get("push_eventos", { token })
         ]);
 
-       adminStore.listaOriginal = isArrayValido(dadosAdmin) ? dadosAdmin : [];
-       adminStore.eventosPush = isArrayValido(eventosPush) ? eventosPush : [];
+        adminStore.listaOriginal = isArrayValido(dadosAdmin) ? dadosAdmin : [];
+        adminStore.eventosPush = isArrayValido(eventosPush) ? eventosPush : [];
 
         processar();
 
@@ -130,10 +98,6 @@ async function carregarDados() {
     }
 }
 
-/* ======================================
-   ⚙️ PROCESSAMENTO
-====================================== */
-
 function processar() {
     calcularScore();
     renderTabela(adminStore.listaOriginal);
@@ -142,7 +106,7 @@ function processar() {
 }
 
 /* ======================================
-   📊 SCORE
+   📊 CÁLCULO DE SCORE
 ====================================== */
 
 function calcularScore() {
@@ -164,7 +128,42 @@ function calcularScore() {
 }
 
 /* ======================================
-   📢 PUSH GLOBAL (via API CLIENT)
+   📥 EXPORTAÇÃO CSV (Extraída para a raiz)
+====================================== */
+
+function exportCSV() {
+    if (!adminStore.listaOriginal.length) {
+        UI.modal.show("AVISO", "Nenhum dado para exportar.", "⚠️", "orange");
+        return;
+    }
+
+    const linhas = [
+        ["Matrícula", "Nome", "Total", "Score"],
+        ...adminStore.listaOriginal.map(v => [
+            v.matricula,
+            v.nome,
+            v.total || 0,
+            adminStore.scoreMap[v.matricula] ?? 0
+        ])
+    ];
+
+    const csv = linhas
+        .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `derso_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+}
+
+/* ======================================
+   📢 PUSH GLOBAL
 ====================================== */
 
 async function dispararPushGlobal() {
@@ -188,7 +187,6 @@ async function dispararPushGlobal() {
         btn.disabled = true;
         btn.textContent = "ENVIANDO...";
 
-        // Corrigido: mensagem como param, não embutida na action string
         const res = await apiClient.get("push_manual", {
             token,
             mensagem: encodeURIComponent(mensagem)
@@ -219,7 +217,7 @@ async function dispararPushGlobal() {
 }
 
 /* ======================================
-   🎯 EVENTOS
+   🎯 CONTROLE DE EVENTOS (BIND)
 ====================================== */
 
 function bindEventos() {
@@ -227,7 +225,7 @@ function bindEventos() {
 
     $("btnExit")?.addEventListener("click", sairPainel);
     $("refresh")?.addEventListener("click", carregarDados);
-    $("export")?.addEventListener("click", exportCSV);
+    $("export")?.addEventListener("click", exportCSV); // ✅ Agora encontra a função perfeitamente!
     $("search")?.addEventListener("input", renderFiltrado);
     $("mes")?.addEventListener("change", carregarDados);
     $("btnSendPush")?.addEventListener("click", dispararPushGlobal);
@@ -239,7 +237,7 @@ function sairPainel() {
 }
 
 /* ======================================
-   🔍 FILTRO
+   🔍 FILTRO DYNAMIC CONTROLLER
 ====================================== */
 
 function renderFiltrado() {
@@ -254,7 +252,7 @@ function renderFiltrado() {
 }
 
 /* ======================================
-   📦 TABELA
+   📦 RENDERIZADORES DE TELA E ELEMENTOS
 ====================================== */
 
 function renderTabela(lista) {
@@ -285,10 +283,6 @@ function renderTabela(lista) {
     }).join("");
 }
 
-/* ======================================
-   📊 KPI
-====================================== */
-
 function updateKPIs() {
     const total = adminStore.listaOriginal.length;
     const folgas = adminStore.listaOriginal.reduce((a, b) => a + (b.total || 0), 0);
@@ -305,7 +299,7 @@ function setText(id, v) {
 }
 
 /* ======================================
-   📈 CHART
+   📈 RENDERIZADOR DE GRÁFICOS (CHART.JS)
 ====================================== */
 
 async function garantirChartJS() {
@@ -326,7 +320,6 @@ function renderChart(lista = []) {
 
     adminStore.grafico?.destroy();
 
-    // Labels e dados extraídos da lista real
     const labels = lista.map(v => v.nome || v.matricula);
     const valores = lista.map(v => v.total || 0);
 
@@ -346,15 +339,15 @@ function renderChart(lista = []) {
 }
 
 /* ======================================
-   🧾 UI HELPERS
+   🧾 UI TEMPLATE HELPERS
 ====================================== */
 
 function loadingHTML() {
-    return `<div style="padding:40px;text-align:center;">Carregando...</div>`;
+    return `<div style="padding:40px;text-align:center;font-weight:bold;color:var(--azul-marinho);">Carregando painel administrativo...</div>`;
 }
 
 function erroHTML(msg) {
-    return `<div style="padding:20px;color:red;">${msg}</div>`;
+    return `<div style="padding:20px;color:red;font-weight:bold;text-align:center;">⚠️ Erro fatal: ${msg}</div>`;
 }
 
 function gerarHTMLAdmin() {
