@@ -198,9 +198,8 @@ async function abrirPortaAdmin() {
     UI.loading.show("Autenticando administrador...");
 
     try {
-        // 🌟 CORRIGIDO: Passando a action na URL e no corpo para forçar o desvio do formulário
-        const result = await apiClient.post("?action=adminlogin", {
-            action: "adminlogin",
+        // ✅ Perfeito: Agora o apiClient cuida da estrutura interna do JSON
+        const result = await apiClient.post("adminlogin", {
             matricula: String(login).trim(),
             senha: String(senha).trim()
         });
@@ -237,7 +236,6 @@ async function abrirPortaAdmin() {
                 "ERRO"
             );
 
-            // Se o servidor respondeu mas não autorizou, mostra a mensagem vinda do banco
             const msgErro = result?.message || "Credenciais inválidas.";
 
             UI.modal.show(
