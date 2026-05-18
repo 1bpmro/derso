@@ -41,9 +41,8 @@ async function request(url, options = {}, retry = 0) {
             "ERRO"
         );
 
-        // Retry apenas para erros de rede/timeout, nunca para erros HTTP
         if (!isHttpError && retry < MAX_RETRY) {
-            await sleep(RETRY_DELAY_MS * (retry + 1)); // backoff simples
+            await sleep(RETRY_DELAY_MS * (retry + 1));
             return request(url, options, retry + 1);
         }
 
@@ -66,27 +65,24 @@ export function get(action, params = {}) {
 }
 
 /* =========================
-   POST
+   POST (Corrigido para enviar JSON Puro)
 ========================= */
-
 export function post(action, body = {}) {
-
-    const formData = new FormData();
-
-    formData.append("action", action);
-
-    Object.entries(body).forEach(([key, value]) => {
-        formData.append(key, value);
-    });
-
+    // ✅ Em vez de FormData, envia como JSON estruturado que o Google Apps Script lê perfeitamente
     return request(CONFIG.API_URL, {
         method: "POST",
-        body: formData
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            action,
+            ...body
+        })
     });
 }
 
 /* =========================
-   POST FORM (sem action)
+   POST FORM
 ========================= */
 export function postForm(formLike) {
     const body =
