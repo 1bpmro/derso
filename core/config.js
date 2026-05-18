@@ -1,7 +1,7 @@
 // core/config.js
 export const CONFIG = Object.freeze({
-    API_URL: "https://script.google.com/macros/s/AKfycbySobQVE00uUwPdlJwvfWzVgfq9N822lBjnIYkp5tMq1-pGE1GzKJHhJKsiepIDZVvSow/exec",
-    VERSAO: "7.1.1",
+    API_URL: "https://script.google.com/macros/s/AKfycbyRZe-Dsc-aKFRwkfRuGPWnstsC-yr7jRfrZGPwunmScbcu_7psRE4lErC-n3GhMN_weg/exec",
+    VERSAO: "9.5.7",
     EMAIL_LIST: [
         "gmail.com",
         "hotmail.com",
