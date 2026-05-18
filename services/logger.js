@@ -9,6 +9,9 @@ export function registrarLog(
     detalhes,
     tipo = "INFO"
 ) {
+    // 🎨 [HARDENING GPT - MODELO 2]: Normaliza e limpa a string de tipo
+    let tipoNormalizado = String(tipo).toUpperCase().trim();
+    if (tipoNormalizado === "WARN") tipoNormalizado = "AVISO";
 
     const agora = new Date();
 
@@ -16,7 +19,7 @@ export function registrarLog(
         data: agora.toLocaleString("pt-BR"),
         acao,
         detalhes,
-        tipo
+        tipo: tipoNormalizado // Armazena o tipo já tratado na memória de sessão
     };
 
     /* ================================
@@ -40,27 +43,27 @@ export function registrarLog(
     const cores = {
         INFO: "🔵",
         SUCESSO: "🟢",
-        AVISO: "🟡",
+        AVISO: "🟡", // ✅ Mapeado tanto para chamadas "AVISO" quanto antigas "WARN"
         ERRO: "🔴",
         SISTEMA: "⚙️"
     };
 
     const prefixo =
-        `${cores[tipo] || "⚪"} ` +
+        `${cores[tipoNormalizado] || "⚪"} ` +
         `[${log.data}] ${acao}:`;
 
     /* ================================
        🧠 CONSOLE ADEQUADO
     ================================ */
 
-    switch (tipo) {
+    switch (tipoNormalizado) {
 
         case "ERRO":
             console.error(prefixo, detalhes);
             break;
 
         case "AVISO":
-            console.warn(prefixo, detalhes);
+            console.warn(prefixo, detalhes); // ✅ Ativa o alerta amarelo nativo do DevTools
             break;
 
         case "SUCESSO":
