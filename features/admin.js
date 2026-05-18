@@ -1,4 +1,4 @@
-// features/admin.js (v2.1 - Escopo corrigido e alinhado ao core/api)
+// features/admin.js (v2.2 - Escopo corrigido e blindagem XSS ativa)
 
 import { CONFIG } from "../core/config.js";
 import { registrarLog } from "../services/logger.js";
@@ -7,7 +7,7 @@ import { apiClient } from "../core/apiClient.js";
 import { isArrayValido } from "../core/utils.js";
 
 /* ======================================
-   🧠 STORE INTERNA
+   🧠 STORE
 ====================================== */
 
 const adminStore = {
@@ -22,7 +22,20 @@ const adminStore = {
 const getToken = () => localStorage.getItem("adminToken");
 
 /* ======================================
-   🚀 INIT PRINCIPAL
+   🛡️ SECURITY PROTECTION (XSS SANITIZER)
+====================================== */
+
+function escaperHTML(string) {
+    return String(string || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/* ======================================
+   🚀 INIT
 ====================================== */
 
 export async function iniciarPainelAdmin() {
@@ -40,14 +53,13 @@ export async function iniciarPainelAdmin() {
 
         container.innerHTML = gerarHTMLAdmin();
        
-        // Vincula as escutas de eventos agora que o HTML existe
         bindEventos();
 
         const ok = await carregarDados();
 
         if (ok) {
             adminStore.carregado = true;
-            registrarLog("ADMIN", "Painel iniciado com sucesso", "SUCESSO");
+            registrarLog("ADMIN", "Painel iniciado", "SUCESSO");
         }
 
     } catch (err) {
@@ -59,7 +71,7 @@ export async function iniciarPainelAdmin() {
 }
 
 /* ======================================
-   📦 OPERAÇÕES COM DADOS
+   📦 DADOS (VIA API CLIENT — params separados)
 ====================================== */
 
 async function carregarDados() {
@@ -98,6 +110,10 @@ async function carregarDados() {
     }
 }
 
+/* ======================================
+   ⚙️ PROCESSAMENTO
+====================================== */
+
 function processar() {
     calcularScore();
     renderTabela(adminStore.listaOriginal);
@@ -106,7 +122,7 @@ function processar() {
 }
 
 /* ======================================
-   📊 CÁLCULO DE SCORE
+   📊 SCORE
 ====================================== */
 
 function calcularScore() {
@@ -128,7 +144,7 @@ function calcularScore() {
 }
 
 /* ======================================
-   📥 EXPORTAÇÃO CSV (Extraída para a raiz)
+   📥 EXPORTAÇÃO CSV (Móvel p/ Raiz do Arquivo)
 ====================================== */
 
 function exportCSV() {
@@ -153,17 +169,15 @@ function exportCSV() {
 
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    
     const a = document.createElement("a");
     a.href = url;
     a.download = `derso_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
-    
     URL.revokeObjectURL(url);
 }
 
 /* ======================================
-   📢 PUSH GLOBAL
+   📢 PUSH GLOBAL (via API CLIENT)
 ====================================== */
 
 async function dispararPushGlobal() {
@@ -217,7 +231,7 @@ async function dispararPushGlobal() {
 }
 
 /* ======================================
-   🎯 CONTROLE DE EVENTOS (BIND)
+   🎯 EVENTOS
 ====================================== */
 
 function bindEventos() {
@@ -225,7 +239,7 @@ function bindEventos() {
 
     $("btnExit")?.addEventListener("click", sairPainel);
     $("refresh")?.addEventListener("click", carregarDados);
-    $("export")?.addEventListener("click", exportCSV); // ✅ Agora encontra a função perfeitamente!
+    $("export")?.addEventListener("click", exportCSV); // ✅ Agora mapeia sem falhas de escopo
     $("search")?.addEventListener("input", renderFiltrado);
     $("mes")?.addEventListener("change", carregarDados);
     $("btnSendPush")?.addEventListener("click", dispararPushGlobal);
@@ -237,7 +251,7 @@ function sairPainel() {
 }
 
 /* ======================================
-   🔍 FILTRO DYNAMIC CONTROLLER
+   🔍 FILTRO
 ====================================== */
 
 function renderFiltrado() {
@@ -252,7 +266,7 @@ function renderFiltrado() {
 }
 
 /* ======================================
-   📦 RENDERIZADORES DE TELA E ELEMENTOS
+   📦 TABELA (Blindagem XSS Injetada)
 ====================================== */
 
 function renderTabela(lista) {
@@ -267,11 +281,12 @@ function renderTabela(lista) {
             s < 0 ? "#e74c3c" :
             "#7f8c8d";
 
+        // ✅ Uso do escaperHTML previne qualquer injeção por DOM injection
         return `
         <tr>
             <td>
-                <b>${v.nome}</b><br>
-                <small>${v.matricula}</small>
+                <b>${escaperHTML(v.nome)}</b><br>
+                <small>${escaperHTML(v.matricula)}</small>
             </td>
             <td style="text-align:center;">
                 ${v.total || 0}
@@ -282,6 +297,10 @@ function renderTabela(lista) {
         </tr>`;
     }).join("");
 }
+
+/* ======================================
+   📊 KPI
+====================================== */
 
 function updateKPIs() {
     const total = adminStore.listaOriginal.length;
@@ -299,7 +318,7 @@ function setText(id, v) {
 }
 
 /* ======================================
-   📈 RENDERIZADOR DE GRÁFICOS (CHART.JS)
+   📈 CHART
 ====================================== */
 
 async function garantirChartJS() {
@@ -339,15 +358,15 @@ function renderChart(lista = []) {
 }
 
 /* ======================================
-   🧾 UI TEMPLATE HELPERS
+   🧾 UI HELPERS
 ====================================== */
 
 function loadingHTML() {
-    return `<div style="padding:40px;text-align:center;font-weight:bold;color:var(--azul-marinho);">Carregando painel administrativo...</div>`;
+    return `<div style="padding:40px;text-align:center;">Carregando...</div>`;
 }
 
 function erroHTML(msg) {
-    return `<div style="padding:20px;color:red;font-weight:bold;text-align:center;">⚠️ Erro fatal: ${msg}</div>`;
+    return `<div style="padding:20px;color:red;">${msg}</div>`;
 }
 
 function gerarHTMLAdmin() {
