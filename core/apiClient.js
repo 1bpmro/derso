@@ -11,9 +11,24 @@ const RETRY_DELAY_MS = CONFIG.RETRY_DELAY_MS;
 async function request(url, options = {}, retry = 0) {
     const isPost = options.method === "POST";
     const timeout = isPost ? POST_TIMEOUT : DEFAULT_TIMEOUT;
+    
+    // 🆔 [MELHORIA GPT - ACHADO 3]: Gera um ID único para rastrear esta operação do início ao fim
+    const requestId = Math.random().toString(36).substring(2, 8).toUpperCase();
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
+
+    // Identifica qual action está sendo executada para enriquecer o log
+    let actionIdentificada = "UNKNOWN_ACTION";
+    try {
+        if (isPost && options.body) {
+            const parsedBody = JSON.parse(options.body);
+            actionIdentificada = parsedBody.action || actionIdentificada;
+        } else if (!isPost) {
+            const urlObj = new URL(url);
+            actionIdentificada = urlObj.searchParams.get("action") || actionIdentificada;
+        }
+    } catch { /* fallback silencioso */ }
 
     try {
         const response = await fetch(url, {
@@ -22,34 +37,41 @@ async function request(url, options = {}, retry = 0) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(`HTTP ${response.status} (${response.statusText})`);
         }
 
         const text = await response.text();
         try {
             return JSON.parse(text);
         } catch {
-            throw new Error("Resposta não é JSON válido");
+            throw new Error("Resposta do servidor não é um JSON válido");
         }
     } catch (err) {
         const isTimeout = err.name === "AbortError";
         const isHttpError = err.message.startsWith("HTTP ");
+        
+        // 📊 [MELHORIA GPT - ACHADO 3/5]: Log ultra enriquecido com contexto e monitoramento de retries
+        const sufixoRetry = retry < MAX_RETRY ? `-> Agendando tentativa ${retry + 2}/${MAX_RETRY + 1}` : "-> Esgotado!";
+        const contextoErro = `[ID: ${requestId}][Action: ${actionIdentificada}] Falha (Tentativa ${retry + 1}/${MAX_RETRY + 1}): ${isTimeout ? "TIMEOUT" : err.message} ${sufixoRetry}`;
 
         registrarLog(
-            "API",
-            `Erro request (tentativa ${retry + 1}): ${isTimeout ? "TIMEOUT" : err.message}`,
+            "API_FAIL",
+            contextoErro,
             "ERRO"
         );
 
+        // Se não for erro HTTP definitivo e ainda tiver tentativas, tenta de novo
         if (!isHttpError && retry < MAX_RETRY) {
             await sleep(RETRY_DELAY_MS * (retry + 1));
             return request(url, options, retry + 1);
         }
 
         if (isTimeout) {
-            throw new Error("Timeout na requisição");
+            throw new Error(`Timeout na requisição [Ref: ${requestId}]. O servidor demorou mais de ${timeout/1000}s para responder.`);
         }
 
+        // Adiciona o ID de rastreio ao erro final para a UX saber exibir se quiser
+        err.requestId = requestId;
         throw err;
     } finally {
         clearTimeout(timer);
