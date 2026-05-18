@@ -65,14 +65,14 @@ export function get(action, params = {}) {
 }
 
 /* =========================
-   POST (Corrigido para enviar JSON Puro)
+   POST (Blindado contra Erros de E-mail e Livre de CORS)
 ========================= */
 export function post(action, body = {}) {
-    // ✅ Em vez de FormData, envia como JSON estruturado que o Google Apps Script lê perfeitamente
+    // ✅ Mantemos o formato JSON que o seu GAS exige, mas usamos text/plain para burlar a checagem de CORS do navegador
     return request(CONFIG.API_URL, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "text/plain;charset=utf-8"
         },
         body: JSON.stringify({
             action,
