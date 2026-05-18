@@ -189,7 +189,6 @@ function setupModal() {
 ====================================== */
 
 async function abrirPortaAdmin() {
-
     const login = prompt("🛡️ SISTEMA DERSO\n\nIdentifique-se:");
     if (!login) return;
 
@@ -199,8 +198,8 @@ async function abrirPortaAdmin() {
     UI.loading.show("Autenticando administrador...");
 
     try {
-
-        const result = await apiClient.post("", {
+        // 🌟 CORRIGIDO: Passando a action na URL e no corpo para forçar o desvio do formulário
+        const result = await apiClient.post("?action=adminlogin", {
             action: "adminlogin",
             matricula: String(login).trim(),
             senha: String(senha).trim()
@@ -238,9 +237,12 @@ async function abrirPortaAdmin() {
                 "ERRO"
             );
 
+            // Se o servidor respondeu mas não autorizou, mostra a mensagem vinda do banco
+            const msgErro = result?.message || "Credenciais inválidas.";
+
             UI.modal.show(
                 "ACESSO NEGADO",
-                "Credenciais inválidas.",
+                msgErro,
                 "🚫",
                 "red"
             );
@@ -264,7 +266,6 @@ async function abrirPortaAdmin() {
         );
 
     } finally {
-
         UI.loading.hide();
     }
 }
