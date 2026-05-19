@@ -1,7 +1,38 @@
-// core/config.js (v9.5.7 - Hardening e Centralização Ativa)
+// core/config.js - DERSO Configuration (v9.5.7 - Híbrido Protegido)
+// ============================================
+// ⚠️ SECURITY: Injected via environment variables or safe defaults
+// ============================================
+
+const getEnvVar = (key, defaultValue = undefined) => {
+    const value = 
+        typeof import?.meta?.env?.[key] !== 'undefined' 
+            ? import.meta.env[key]
+            : window.DERSO_CONFIG?.[key]
+            ? window.DERSO_CONFIG[key]
+            : defaultValue;
+    
+    if (!value && defaultValue === undefined) {
+        console.warn(`⚠️ Environment variable ${key} not found and no default provided`);
+    }
+    
+    return value;
+};
+
 export const CONFIG = Object.freeze({
-    API_URL: "https://script.google.com/macros/s/AKfycbyRZe-Dsc-aKFRwkfRuGPWnstsC-yr7jRfrZGPwunmScbcu_7psRE4lErC-n3GhMN_weg/exec",
-    VERSAO: "9.5.7",
+    // ============================================
+    // API ENDPOINTS
+    // ============================================
+    // ✅ Se o Git/Vite não injetar, ele usa a sua URL real do GAS como padrão seguro
+    API_URL: getEnvVar('VITE_API_URL', 'https://script.google.com/macros/s/AKfycbyRZe-Dsc-aKFRwkfRuGPWnstsC-yr7jRfrZGPwunmScbcu_7psRE4lErC-n3GhMN_weg/exec'),
+    
+    // ============================================
+    // VERSION
+    // ============================================
+    VERSAO: getEnvVar('VITE_APP_VERSION', '9.5.7'),
+    
+    // ============================================
+    // EMAIL CONFIGURATION
+    // ============================================
     EMAIL_LIST: [
         "gmail.com",
         "hotmail.com",
@@ -9,34 +40,47 @@ export const CONFIG = Object.freeze({
         "yahoo.com",
         "pm.ro.gov.br"
     ],
-    ADMIN_EMAIL: "ti1bpmro@gmail.com",
-
+    
+    ADMIN_EMAIL: getEnvVar('VITE_ADMIN_EMAIL', 'ti1bpmro@gmail.com'),
+    
     /* ======================================
-       🔒 POLÍTICAS DE AUTENTICAÇÃO (NOVO)
-    ====================================== */
-    ADMIN_SESSION_TIMEOUT: 30 * 60 * 1000, // 30 minutos de sessão ativa
-    MAX_LOGIN_ATTEMPTS: 5,                // Bloqueia após 5 erros seguidos
-    LOGIN_LOCKOUT_TIME: 15 * 60 * 1000,    // Tempo de bloqueio: 15 minutos
-
-       /* ======================================
        🔥 CONFIGURAÇÕES DO FIREBASE & PUSH
-       (Centralizado a pedido da auditoria)
     ====================================== */
     FIREBASE: {
-        apiKey: "AIzaSyDqAtLFEwpxN2Yhju8X8I0QeHWR66copLc",
-        authDomain: "derso-8294b.firebaseapp.com",
-        projectId: "derso-8294b",
-        messagingSenderId: "1056159074696",
-        appId: "1:1056159074696:web:90962abec6bf703c5d923d"
+        apiKey: getEnvVar('VITE_FIREBASE_API_KEY', 'AIzaSyDqAtLFEwpxN2Yhju8X8I0QeHWR66copLc'),
+        authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN', 'derso-8294b.firebaseapp.com'),
+        projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID', 'derso-8294b'),
+        messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID', '1056159074696'),
+        appId: getEnvVar('VITE_FIREBASE_APP_ID', '1:1056159074696:web:90962abec6bf703c5d923d')
     },
-    VAPID_KEY: "BHGFjPdrcahFdPsIVDsA4RA04ArqgiVslZgoZXjwm49O-au9z4hN2TLNQfhYsWdRQnEkZ4khJCaSb-S09dSolkc",
+    VAPID_KEY: getEnvVar('VITE_FIREBASE_VAPID_KEY', 'BHGFjPdrcahFdPsIVDsA4RA04ArqgiVslZgoZXjwm49O-au9z4hN2TLNQfhYsWdRQnEkZ4khJCaSb-S09dSolkc'),
 
-    /* ======================================
-       ⚙️ CONFIGURAÇÕES DE SISTEMA
-    ====================================== */
-    TIMEOUT_FETCH: 10000,       // usado pelo apiClient para GETs
-    TIMEOUT_POST: 15000,        // usado pelo apiClient para POSTs
-    RETRY_MAX: 2,               // renomeado de RETRY_REQUESTS para clareza
-    RETRY_DELAY_MS: 500,        // delay base entre tentativas
-    DEBUG: false
+    // ============================================
+    // SYSTEM CONFIGURATION
+    // ============================================
+    TIMEOUT_FETCH: 10000,
+    TIMEOUT_POST: 15000,
+    RETRY_MAX: 2,
+    RETRY_DELAY_MS: 500,
+    
+    // ============================================
+    // DEBUG MODE
+    // ============================================
+    DEBUG: getEnvVar('VITE_DEBUG', 'false') === 'true',
+    
+    // ============================================
+    // SESSION & SECURITY (Exigido pelo core/auth.js)
+    // ============================================
+    ADMIN_SESSION_TIMEOUT: 30 * 60 * 1000,
+    MAX_LOGIN_ATTEMPTS: 5,
+    LOGIN_LOCKOUT_TIME: 15 * 60 * 1000,
 });
+
+if (!CONFIG.API_URL) {
+    console.error('🔴 CRITICAL: API_URL is not configured. Application cannot function.');
+}
+
+if (CONFIG.DEBUG) {
+    console.warn('🟡 DEBUG MODE ENABLED - This should be disabled in production!');
+    window.CONFIG = CONFIG;
+}
