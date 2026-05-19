@@ -57,12 +57,11 @@ export const UI = {
             if (!refs) return;
             const { modalTitle, modalText, modalIcon, historyContent } = refs;
 
-            // Exibe o container
+            // Exibe o container do modal
             DOM.modal.classList.remove("is-hidden");
             DOM.modal.style.display = "flex";
             document.body.classList.add("modal-open");
 
-            // ✅ TOTALMENTE SEGURO: textContent neutraliza qualquer tag de injeção maliciosa
             if (modalTitle) modalTitle.textContent = title;
             
             if (modalIcon) {
@@ -70,37 +69,40 @@ export const UI = {
                 modalIcon.style.color = color;
             }
 
-            // ✅ DETECÇÃO INTELIGENTE: Se a chamada não marcou explicitamente showHistory, mas o texto
-            // claramente contém a estrutura HTML de tabelas/divs do histórico enviado pelo servidor,
-            // nós forçamos o chaveamento para o fluxo do histórico para não quebrar o layout.
-            const possuiHTMLHistorico = text && (text.includes("<div") || text.includes("<span"));
-            const exibirComoHistorico = showHistory || possuiHTMLHistorico;
+            // ✅ DETECÇÃO REFORÇADA: Se o texto contiver qualquer indício de estrutura HTML 
+            // do histórico (div, span, classes ou estilo em linha), tratamos como histórico legítimo.
+            const stringLimpa = String(text).toLowerCase();
+            const possuiHTML = stringLimpa.includes("<div") || 
+                               stringLimpa.includes("<span") || 
+                               stringLimpa.includes("folga") ||
+                               stringLimpa.includes("style=");
+
+            const exibirComoHistorico = showHistory || possuiHTML;
 
             if (modalText) {
                 if (exibirComoHistorico) {
                     modalText.innerHTML = "";
-                    modalText.style.display = "none"; // Oculta o bloco de texto simples
+                    modalText.style.display = "none"; // Desativa o bloco de erro/aviso comum
                 } else {
                     modalText.style.display = "block";
-                    // ✅ CORREÇÃO XSS: Modais comuns agora renderizam estritamente como texto puro.
-                    // Para pular linhas, use strings com '\n' (ex: "Linha 1\n\nLinha 2")
-                    modalText.textContent = text;
+                    modalText.textContent = text; // Se for aviso simples, vira texto puro seguro
                 }
             }
 
-            // Controle do Histórico
+            // Controle e injeção do Histórico formatado
             if (historyContent) {
                 historyContent.classList.toggle("is-hidden", !exibirComoHistorico);
                 if (exibirComoHistorico) {
-                    // ✅ CORREÇÃO XSS COM LAYOUT PRESERVADO: Passa as divs de folgas pelo filtro 
-                    // de sanitização antes de injetar, renderizando o layout do Sgt Dione de forma segura!
-                    historyContent.innerHTML = sanitizarHTML(text);
+                    // ✅ AJUSTE DE DECODIFICAÇÃO: Converte caracteres como &#x2F; em barras reais 
+                    // e passa pelo filtro sanitizarHTML para renderizar as caixas de folga perfeitamente.
+                    let htmlDecodificado = text.replace(/&#x2F;/g, "/");
+                    historyContent.innerHTML = sanitizarHTML(htmlDecodificado);
                 } else {
                     historyContent.innerHTML = "";
                 }
             }
         },
-
+       
         close() {
             if (!DOM.modal) return;
             DOM.modal.style.display = "none";
