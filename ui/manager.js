@@ -78,11 +78,13 @@ export const UI = {
 
             // Controle do Histórico
             if (historyContent) {
-                historyContent.classList.toggle("is-hidden", !showHistory);
-                if (!showHistory) {
-                    historyContent.innerHTML = "";
-                }
-            }
+    historyContent.classList.toggle("is-hidden", !showHistory);
+    if (showHistory) {
+        historyContent.innerHTML = text; // ✅ coloca o HTML aqui
+    } else {
+        historyContent.innerHTML = "";
+    }
+}
         },
 
         close() {
