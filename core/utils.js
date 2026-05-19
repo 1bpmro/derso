@@ -277,6 +277,7 @@ export function isObjeto(valor) {
     return valor !== null && typeof valor === "object" && !Array.isArray(valor);
 }
 
+
 /* ======================================
    🧪 DEBUG MODE - Expõe funções
 ====================================== */
@@ -285,4 +286,7 @@ if (typeof window !== 'undefined' && window.CONFIG?.DEBUG) {
     window.sanitizeHTMLContent = sanitizeHTMLContent;
     window.sanitizarHTML = sanitizarHTML;
     window.stripHTML = stripHTML;
+    window.normalizarMatricula = normalizarMatricula;
+    window.validarEmail = validarEmail;
+    window.estaEmCooldown = estaEmCooldown;
 }
