@@ -1,4 +1,4 @@
-// services/firebase.js
+// services/firebase.js (Refatorado - Lendo dados da Central de Config)
 
 import { registrarLog } from "./logger.js";
 import { CONFIG } from "../core/config.js";
@@ -9,24 +9,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 /* ====================================== */
-/* 🔐 CONFIG FIREBASE                     */
-/* ====================================== */
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDqAtLFEwpxN2Yhju8X8I0QeHWR66copLc",
-    authDomain: "derso-8294b.firebaseapp.com",
-    projectId: "derso-8294b",
-    messagingSenderId: "1056159074696",
-    appId: "1:1056159074696:web:90962abec6bf703c5d923d"
-};
-
-const VAPID_KEY = "BHGFjPdrcahFdPsIVDsA4RA04ArqgiVslZgoZXjwm49O-au9z4hN2TLNQfhYsWdRQnEkZ4khJCaSb-S09dSolkc";
-
-/* ====================================== */
 /* 🛠️ UTILITÁRIO: caminho do SW           */
 /* ====================================== */
 
-// Corrigido: calculado uma vez, usado em dois lugares
 function getSwPath() {
     return location.hostname.includes("github.io")
         ? "/derso/sw.js"
@@ -34,10 +19,10 @@ function getSwPath() {
 }
 
 /* ====================================== */
-/* 🔥 INIT FIREBASE                       */
+/* 🔥 INIT FIREBASE (Lendo da Config)     */
 /* ====================================== */
 
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(CONFIG.FIREBASE); // ✅ Protegido via centralização
 const messaging = getMessaging(app);
 
 /* ====================================== */
@@ -60,7 +45,6 @@ export async function solicitarPermissaoNotificacao() {
 
         const permission = await Notification.requestPermission();
 
-        // Corrigido: nível de log explícito
         registrarLog(
             "PUSH",
             `Permissão: ${permission}`,
@@ -81,7 +65,7 @@ export async function solicitarPermissaoNotificacao() {
 
 async function registrarServiceWorker() {
     try {
-        const swPath = getSwPath(); // Corrigido: usa utilitário
+        const swPath = getSwPath();
 
         const registration = await navigator.serviceWorker.register(
             swPath,
@@ -114,7 +98,7 @@ export async function registrarDispositivo(matricula) {
         console.log("📲 Iniciando registro de dispositivo...");
 
         /* ================================
-           🔔 PERMISSÃO
+            🔔 PERMISSÃO
         ================================ */
 
         const permitido = await solicitarPermissaoNotificacao();
@@ -124,10 +108,10 @@ export async function registrarDispositivo(matricula) {
         }
 
         /* ================================
-           🧠 SERVICE WORKER
+            🧠 SERVICE WORKER
         ================================ */
 
-        const swPath = getSwPath(); // Corrigido: usa utilitário
+        const swPath = getSwPath();
 
         let registration = await navigator.serviceWorker.getRegistration(swPath);
         if (!registration) {
@@ -135,11 +119,11 @@ export async function registrarDispositivo(matricula) {
         }
 
         /* ================================
-           🔑 TOKEN FIREBASE
+            🔑 TOKEN FIREBASE
         ================================ */
 
         const token = await getToken(messaging, {
-            vapidKey: VAPID_KEY,
+            vapidKey: CONFIG.VAPID_KEY, // ✅ Protegido via centralização
             serviceWorkerRegistration: registration
         });
 
@@ -153,7 +137,7 @@ export async function registrarDispositivo(matricula) {
         registrarLog("PUSH", "Token gerado", "SUCESSO");
 
         /* ================================
-           🚫 EVITA REENVIO DESNECESSÁRIO
+            🚫 EVITA REENVIO DESNECESSÁRIO
         ================================ */
 
         const ultimoToken = localStorage.getItem("firebase_token");
@@ -165,8 +149,7 @@ export async function registrarDispositivo(matricula) {
         }
 
         /* ================================
-           📡 ENVIO PARA GAS
-           Corrigido: usa apiClient em vez de fetch manual
+            📡 ENVIO PARA GAS
         ================================ */
 
         const result = await apiClient.post("salvar_token", { matricula, token });
