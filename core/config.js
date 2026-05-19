@@ -74,10 +74,14 @@ export const CONFIG = Object.freeze({
     // ============================================
     // DEBUG MODE
     // ============================================
-    // ✅ INTELIGENTE: true em localhost, false em produção
-DEBUG: getEnvVar('VITE_DEBUG', 
-    (typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'true' : 'false'
-) === 'true',
+    // ✅ PERMISSIVO PARA PRODUÇÃO MILITAR: Ativo em localhost ou na URL do repositório de homologação do BPM
+    DEBUG: getEnvVar('VITE_DEBUG', 
+        (typeof window !== 'undefined' && (
+            window.location.hostname === 'localhost' || 
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname.includes('github.io') // 🛡️ Permite depurar no GitHub Pages enquanto finaliza os testes
+        )) ? 'true' : 'false'
+    ) === 'true',
     
     // ============================================
     // SESSION & SECURITY (Exigido pelo core/auth.js)
@@ -91,7 +95,11 @@ if (!CONFIG.API_URL) {
     console.error('🔴 CRITICAL: API_URL is not configured. Application cannot function.');
 }
 
+// ✅ EXPOSIÇÃO CORRIGIDA: Exibe o objeto de configuração e injeta na window para testes em homologação
 if (CONFIG.DEBUG) {
-    console.warn('🟡 DEBUG MODE ENABLED - CONFIG exposed to window');
+    console.warn('🟡 DEBUG MODE ENABLED - Monitoramento operacional ativo.');
     window.CONFIG = CONFIG;
+} else {
+    // Garante compatibilidade básica se desativado por completo
+    if (typeof window !== 'undefined') window.CONFIG = undefined;
 }
