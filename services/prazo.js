@@ -2,6 +2,7 @@
 
 import { DOM } from "../core/dom.js";
 import { STATE } from "../core/state.js"; 
+import { sanitizarHTML } from "../core/utils.js"; // ✅ Importando sua função de proteção unificada
 
 /* ======================================
    ⏱️ CONTROLE GLOBAL
@@ -73,7 +74,7 @@ export function monitorarPrazos(
             .toUpperCase();
 
     /* ======================================
-       📆 INPUT DATE
+       ... INPUT DATE
     ====================================== */
 
     if (DOM.data) {
@@ -122,15 +123,16 @@ export function monitorarPrazos(
 
             setEstadoVisual("estado-inspecao");
 
+            // ✅ AJUSTE DE SEGURANÇA: Removido as tags inline daqui para higienizar o fluxo do timer
             atualizarTimer(
-    abertura - agora,
-    `<b style="color:#1A3C6E">ESTAMOS PASSANDO EM INSPEÇÃO AO CÓDIGO</b><br>Abertura em:`
-);
+                abertura - agora,
+                "ESTAMOS PASSANDO EM INSPEÇÃO AO CÓDIGO\nAbertura em:"
+            );
         }
 
         /* ======================================
            ✅ SISTEMA ENCERRADO
-        ====================================== */
+        ===================================== */
 
         else if (agora >= fechamento) {
 
@@ -148,20 +150,15 @@ export function monitorarPrazos(
 
                 setEstadoVisual("estado-sucesso");
 
+                // ✅ PROTEÇÃO CONTRA XSS: Sanitizando a variável dinâmica mesSeguinte/nomeMesRef antes de injetar
                 DOM.timerDisplay.innerHTML = `
-                    <b style="color:#2E7D32">
-                        MISSÃO CUMPRIDA!
-                    </b><br>
-
-                    Solicitações para
-                    <b>${nomeMesRef}</b>
-                    encerradas.
+                    <b style="color:#2E7D32">MISSÃO CUMPRIDA!</b><br>
+                    Solicitações para <b>${sanitizarHTML(nomeMesRef)}</b> encerradas.
                 `;
 
             } else {
 
-                DOM.timerDisplay.innerHTML =
-                    "⌛ Aguardando novo cronograma...";
+                DOM.timerDisplay.textContent = "⌛ Aguardando novo cronograma...";
             }
         }
 
@@ -303,27 +300,16 @@ function atualizarTimer(
     titulo
 ) {
 
-    const d =
-        Math.floor(diff / 86400000);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
 
-    const h =
-        Math.floor(
-            (diff % 86400000) / 3600000
-        );
-
-    const m =
-        Math.floor(
-            (diff % 3600000) / 60000
-        );
-
-    const s =
-        Math.floor(
-            (diff % 60000) / 1000
-        );
-
+    // ✅ CORREÇÃO CIRÚRGICA DE XSS (Opção 3 Adaptada):
+    // Passamos o título pela higienização estrita. O uso de white-space: pre-line no CSS do timer
+    // cuida da quebra se passarmos '\n' na string, eliminando vetores via <br>.
     DOM.timerDisplay.innerHTML = `
-        <b>${titulo}</b><br>
-
+        <b style="white-space: pre-line">${sanitizarHTML(titulo)}</b><br>
         <span style="font-weight:bold">
             ${d}d ${h}h ${m}m ${s}s
         </span>
@@ -378,11 +364,12 @@ function criarInfoPeriodo(
 
     if (info) {
 
+        // ✅ PROTEÇÃO CONTRA XSS: Escapando as datas antes da injeção via innerHTML
         info.innerHTML = `
             📅 Período permitido:
-            <b>${min.toLocaleDateString("pt-BR")}</b>
+            <b>${sanitizarHTML(min.toLocaleDateString("pt-BR"))}</b>
             a
-            <b>${max.toLocaleDateString("pt-BR")}</b>
+            <b>${sanitizarHTML(max.toLocaleDateString("pt-BR"))}</b>
         `;
     }
 }
