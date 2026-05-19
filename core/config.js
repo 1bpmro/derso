@@ -4,18 +4,25 @@
 // ============================================
 
 const getEnvVar = (key, defaultValue = undefined) => {
-    const value = 
-        typeof import?.meta?.env?.[key] !== 'undefined' 
-            ? import.meta.env[key]
-            : window.DERSO_CONFIG?.[key]
-            ? window.DERSO_CONFIG[key]
-            : defaultValue;
-    
-    if (!value && defaultValue === undefined) {
-        console.warn(`⚠️ Environment variable ${key} not found and no default provided`);
+    let value = undefined;
+
+    try {
+        // ✅ Correção Antifalha: Verifica a existência do 'import.meta.env' de forma tradicional 
+        // para evitar o erro 'Unexpected token ?.' em navegadores antigos ou WebViews.
+        if (typeof import !== 'undefined' && import.meta && import.meta.env) {
+            value = import.meta.env[key];
+        }
+    } catch (e) {
+        // Ignora falhas de escopo isoladas do import.meta no ecossistema estático puro
     }
-    
-    return value;
+
+    // ✅ Segundo Fallback: Se não achou via build, busca no objeto global window do navegador (modelo estático)
+    if (typeof value === 'undefined' && typeof window !== 'undefined' && window.DERSO_CONFIG) {
+        value = window.DERSO_CONFIG[key];
+    }
+
+    // ✅ Retorna o valor encontrado ou o padrão seguro com dados de produção do batalhão
+    return typeof value !== 'undefined' ? value : defaultValue;
 };
 
 export const CONFIG = Object.freeze({
