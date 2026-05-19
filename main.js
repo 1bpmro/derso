@@ -1,4 +1,4 @@
-// main.js - DERSO v9.2 CORE ENGINE 🧠⚙️ (HYBRID SAFE BUILD)
+// main.js - DERSO v9.5.7 CORE ENGINE 🧠⚙️ (HYBRID SAFE BUILD)
 
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
@@ -19,6 +19,9 @@ import { configurarAdminPage } from "./features/adminAccess.js";
 
 import { apiClient } from "./core/apiClient.js";
 
+// 🔐 IMPORT DE SEGURANÇA ATUALIZADO (Exigido pela auditoria de maio de 2026)
+import { hasAdminSession } from "./core/auth.js"; 
+
 /* ======================================
    🧠 APP CORE STATE
 ====================================== */
@@ -35,14 +38,10 @@ const APP = {
    🧯 EMERGENCY UI UNLOCK
 ====================================== */
 function forceUnlockUI() {
-
     setTimeout(() => {
-
-        // se já carregou, ignora
         if (APP.uiReady) return;
 
         try {
-
             UI.loading?.hide?.();
 
             if (DOM.formContent) {
@@ -60,76 +59,48 @@ function forceUnlockUI() {
                 "UI unlock emergencial executado",
                 "WARN"
             );
-
         } catch (e) {
-
             console.error("UI unlock fail:", e);
-
         }
-
     }, 8000);
-
 }
 
 /* ======================================
    🔐 GUARDS
 ====================================== */
-function hasAdminSession() {
 
-    const token = localStorage.getItem("adminToken");
-
-    return Boolean(token && token.length > 10);
-
-}
+// ✅ Removida a validação antiga baseada em localStorage fraco.
+// O guard agora usa a função importada do `core/auth.js` que gerencia tokens e timeouts.
 
 function getMatricula() {
-
     const cached = localStorage.getItem("matricula_usuario");
-
     if (cached) return cached;
 
     const input = DOM.matricula?.value?.trim();
-
     if (input) {
         localStorage.setItem("matricula_usuario", input);
     }
-
     return input;
-
 }
 
 /* ======================================
    🧹 HELPERS
 ====================================== */
 function clearBadge() {
-
     if (!("clearAppBadge" in navigator)) return;
-
     navigator.clearAppBadge().catch(() => {});
-
 }
 
 /* ======================================
    📲 INSTALL HINT
 ====================================== */
 function showInstallHint() {
-
-    // já instalado
-    if (
-        window.matchMedia("(display-mode: standalone)").matches
-    ) return;
-
-    // evita duplicidade
+    if (window.matchMedia("(display-mode: standalone)").matches) return;
     if (APP.modalShown) return;
-
-    // UI ainda não pronta
     if (!APP.uiReady) return;
-
-    // modal indisponível
     if (!UI?.modal?.show) return;
 
     try {
-
         registrarLog(
             "SISTEMA",
             "Exibindo hint de instalação",
@@ -144,53 +115,36 @@ function showInstallHint() {
         );
 
         APP.modalShown = true;
-
     } catch (e) {
-
         console.error("Install hint fail:", e);
-
     }
-
 }
 
 /* ======================================
    🌐 API
 ====================================== */
 async function loadInitialData() {
-
     return await apiClient.get("get_initial_data");
-
 }
 
 /* ======================================
    🧠 STATE
 ====================================== */
 function hydrateState(data = {}) {
-
     try {
-
-        // limpa sem quebrar referência
         Object.keys(STATE.employeeList).forEach(key => {
             delete STATE.employeeList[key];
         });
 
         const fonte = data.lista || {};
 
-        // formato objeto
-        if (
-            fonte &&
-            typeof fonte === "object" &&
-            !Array.isArray(fonte)
-        ) {
-
+        if (fonte && typeof fonte === "object" && !Array.isArray(fonte)) {
             Object.entries(fonte).forEach(([matricula, dados]) => {
-
                 STATE.employeeList[matricula] = {
                     matricula: matricula,
                     nome: dados.nome || "",
                     niver: dados.niver || ""
                 };
-
             });
 
             registrarLog(
@@ -198,22 +152,11 @@ function hydrateState(data = {}) {
                 `Lista hidratada: ${Object.keys(STATE.employeeList).length} militares`,
                 "INFO"
             );
-
-        }
-
-        // fallback array
-        else if (Array.isArray(fonte)) {
-
+        } else if (Array.isArray(fonte)) {
             fonte.forEach(militar => {
-
-                const mat =
-                    militar.matricula ||
-                    militar.MATRICULA;
-
+                const mat = militar.matricula || militar.MATRICULA;
                 if (!mat) return;
-
                 STATE.employeeList[mat] = militar;
-
             });
 
             registrarLog(
@@ -221,30 +164,23 @@ function hydrateState(data = {}) {
                 `Lista hidratada via array: ${fonte.length}`,
                 "INFO"
             );
-
         }
 
         STATE.userScore = data.score || 0;
-
     } catch (e) {
-
         registrarLog(
             "SISTEMA",
             "Falha ao hidratar estado",
             "ERRO"
         );
-
         console.error(e);
-
     }
-
 }
 
 /* ======================================
    📋 BUSINESS RULES
 ====================================== */
 function processBusinessRules(data = {}) {
-
     registrarLog(
         "SISTEMA",
         `Score: ${STATE.userScore}`,
@@ -252,52 +188,32 @@ function processBusinessRules(data = {}) {
     );
 
     const datas = data.datas;
-
-    if (
-        datas?.abertura &&
-        datas?.fechamento
-    ) {
-
-        monitorarPrazos(
-            datas.abertura,
-            datas.fechamento
-        );
-
+    if (datas?.abertura && datas?.fechamento) {
+        monitorarPrazos(datas.abertura, datas.fechamento);
     }
-
 }
 
 /* ======================================
-   🧾 RESTORE FORM
+   ♻️ RESTORE FORM
 ====================================== */
 function restoreForm() {
-
     const draft = restaurarRascunho();
-
     if (!draft || !DOM.form) return;
 
     for (const [key, value] of Object.entries(draft)) {
-
         const field = DOM.form.elements[key];
-
         if (!field) continue;
 
         if (field.type === "radio") {
-
             const radio = DOM.form.querySelector(
                 `input[name="${key}"][value="${value}"]`
             );
-
             if (radio) {
                 radio.checked = true;
             }
-
         } else {
-
             field.value = value;
-
         }
-
     }
 
     registrarLog(
@@ -305,73 +221,52 @@ function restoreForm() {
         "Restaurado",
         "INFO"
     );
-
 }
 
 /* ======================================
    🔔 PUSH
 ====================================== */
 async function registerPushIfPossible() {
-
     if (APP.pushLocked) return;
 
     const matricula = getMatricula();
-
     if (!matricula) return;
 
     APP.pushLocked = true;
 
     try {
-
         await registrarDispositivo(matricula);
-
     } catch (err) {
-
         console.error("Push registration fail:", err);
-
     } finally {
-
         APP.pushLocked = false;
-
     }
-
 }
 
+// Corrigido: usando arrow function limpa
 function startPushFlow() {
-
     const mat = getMatricula();
-
     if (!mat) return;
-
-    setTimeout(registerPushIfPossible, 2500);
-
+    setTimeout(() => registerPushIfPossible(), 2500);
 }
 
 /* ======================================
    🔐 ADMIN
 ====================================== */
 function initAdmin() {
-
-    if (!hasAdminSession()) return;
+    if (!hasAdminSession()) return; // ✅ Executa a validação avançada com expiração de tempo
 
     try {
-
         configurarAdminPage();
-
     } catch (e) {
-
         console.error("Admin init fail:", e);
-
     }
-
 }
 
 /* ======================================
    🎯 FINAL INIT
 ====================================== */
 function finalizeInit() {
-
-    // 🔓 libera UI IMEDIATAMENTE
     UI.loading?.hide?.();
 
     if (DOM.formContent) {
@@ -379,22 +274,12 @@ function finalizeInit() {
     }
 
     document.body.style.overflow = "auto";
-
     APP.uiReady = true;
 
-    // 🎨 tema
     applyInstitutionalTheme();
- 
-    // 📎 footer
     updateFooter();
-
-    // 🎛️ handlers
     setupEvents();
-
-    // 🧾 draft
     restoreForm();
-
-    // 🧹 badge
     clearBadge();
 
     registrarLog(
@@ -403,24 +288,16 @@ function finalizeInit() {
         "SUCESSO"
     );
 
-    // 🔐 admin
     initAdmin();
-
-    // 🔔 push
     startPushFlow();
-
-    // 📲 instalação
-    setTimeout(showInstallHint, 4000);
-
+    setTimeout(() => showInstallHint(), 4000);
     APP.initialized = true;
-
 }
 
 /* ======================================
    ❌ FATAL
 ====================================== */
 function handleFatal(error) {
-
     APP.error = error;
 
     registrarLog(
@@ -432,114 +309,75 @@ function handleFatal(error) {
     console.error(error);
 
     try {
-
         UI.loading?.hide?.();
-
     } catch {}
 
     if (DOM.formContent) {
         DOM.formContent.classList.remove("is-hidden");
     }
 
-    // evita crash duplo
     if (UI?.modal?.show) {
-
         UI.modal.show(
             "AVISO DE SISTEMA",
             "O sistema apresentou instabilidade na conexão.",
             "📡",
             "#f39c12"
         );
-
     }
-
 }
 
 /* ======================================
    🚀 BOOT
 ====================================== */
 async function bootstrap() {
-
     APP.bootstrapTime = Date.now();
-
     clearBadge();
 
     registrarLog(
         "SISTEMA",
-        "Boot v9.2 iniciado",
+        "Boot v9.5.7 iniciado",
         "INFO"
     );
 
-    // 🧯 fallback anti tela preta
     forceUnlockUI();
 
     try {
-
-        // ⚠️ DOM parcial não mata app
         if (!DOM?.formContent) {
             throw new Error("formContent não encontrado");
         }
 
-        // 🔵 loading
-        UI.loading?.show?.(
-            "Sincronizando sistema..."
-        );
+        UI.loading?.show?.("Sincronizando sistema...");
 
-        // 🧠 força render do loading
         await new Promise(requestAnimationFrame);
         await new Promise(requestAnimationFrame);
 
-        // 🌐 API
         let data = {};
 
         try {
-
             data = await loadInitialData();
-
         } catch (apiError) {
-
             registrarLog(
                 "SISTEMA",
                 "Modo offline/fallback ativado",
                 "WARN"
             );
-
-            console.warn(
-                "API FAIL:",
-                apiError
-            );
-
+            console.warn("API FAIL:", apiError);
         }
 
-        // 🧠 hidratação
         hydrateState(data);
-
-        // 📋 regras
         processBusinessRules(data);
-
-        // 🎯 finalização
         finalizeInit();
 
     } catch (error) {
-
-        console.error(
-            "BOOT ERROR:",
-            error
-        );
-
+        console.error("BOOT ERROR:", error);
         handleFatal(error);
-
     }
-
 }
 
 /* ======================================
    🚀 START
 ====================================== */
-document.addEventListener(
-    "DOMContentLoaded",
-    bootstrap
-);
+document.addEventListener("DOMContentLoaded", bootstrap);
 
 /* ======================================
    🧪 DEBUG
