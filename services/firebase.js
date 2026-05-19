@@ -1,16 +1,41 @@
-// services/firebase.js (Refatorado - Lendo dados da Central de Config)
+// services/firebase.js
+// 🔐 SECURITY UPDATED: Reading from centralized hybrid CONFIG
 
 import { registrarLog } from "./logger.js";
 import { CONFIG } from "../core/config.js";
 import { apiClient } from "../core/apiClient.js";
 
-// 🔥 Firebase (ESM via CDN)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 /* ====================================== */
-/* 🛠️ UTILITÁRIO: caminho do SW           */
+/* 🔐 CONFIG FIREBASE (Lendo da Config)   */
 /* ====================================== */
+
+const firebaseConfig = CONFIG.FIREBASE; // ✅ Ajustado para ler da nossa central híbrida
+
+const validateFirebaseConfig = (config) => {
+    const requiredFields = ['apiKey', 'authDomain', 'projectId', 'messagingSenderId', 'appId'];
+    const missing = config ? requiredFields.filter(field => !config[field]) : requiredFields;
+    
+    if (missing.length > 0) {
+        console.error(`🔴 Firebase config missing: ${missing.join(', ')}`);
+        registrarLog("FIREBASE", `Config incompleto: ${missing.join(', ')}`, "ERRO");
+        return false;
+    }
+    return true;
+};
+
+if (!validateFirebaseConfig(firebaseConfig)) {
+    console.error("🔴 Firebase initialization failed: Check your core/config.js file");
+}
+
+const VAPID_KEY = CONFIG.VAPID_KEY; // ✅ Ajustado para ler da nossa central híbrida
+
+if (!VAPID_KEY) {
+    console.warn("🟡 Firebase VAPID_KEY not configured. Push notifications will not work.");
+    registrarLog("FIREBASE", "VAPID_KEY não configurado", "AVISO");
+}
 
 function getSwPath() {
     return location.hostname.includes("github.io")
@@ -18,12 +43,18 @@ function getSwPath() {
         : "/sw.js";
 }
 
-/* ====================================== */
-/* 🔥 INIT FIREBASE (Lendo da Config)     */
-/* ====================================== */
+let app;
+let messaging;
 
-const app = initializeApp(CONFIG.FIREBASE); // ✅ Protegido via centralização
-const messaging = getMessaging(app);
+try {
+    if (validateFirebaseConfig(firebaseConfig)) {
+        app = initializeApp(firebaseConfig);
+        messaging = getMessaging(app);
+    }
+} catch (error) {
+    console.error("🔴 Firebase initialization error:", error);
+    registrarLog("FIREBASE", `Erro ao inicializar: ${error.message}`, "ERRO");
+}
 
 /* ====================================== */
 /* 🔔 PERMISSÃO                           */
@@ -95,21 +126,18 @@ export async function registrarDispositivo(matricula) {
             return;
         }
 
-        console.log("📲 Iniciando registro de dispositivo...");
+        if (!/^\d{4,}$/.test(matricula.trim())) {
+            registrarLog("PUSH", "Formato de matrícula inválido", "ERRO");
+            return;
+        }
 
-        /* ================================
-            🔔 PERMISSÃO
-        ================================ */
+        console.log("📲 Iniciando registro de dispositivo...");
 
         const permitido = await solicitarPermissaoNotificacao();
         if (!permitido) {
             registrarLog("PUSH", "Permissão negada", "ERRO");
             return;
         }
-
-        /* ================================
-            🧠 SERVICE WORKER
-        ================================ */
 
         const swPath = getSwPath();
 
@@ -118,12 +146,13 @@ export async function registrarDispositivo(matricula) {
             registration = await registrarServiceWorker();
         }
 
-        /* ================================
-            🔑 TOKEN FIREBASE
-        ================================ */
+        if (!messaging) {
+            registrarLog("PUSH", "Firebase não inicializado", "ERRO");
+            return;
+        }
 
         const token = await getToken(messaging, {
-            vapidKey: CONFIG.VAPID_KEY, // ✅ Protegido via centralização
+            vapidKey: VAPID_KEY,
             serviceWorkerRegistration: registration
         });
 
@@ -133,30 +162,22 @@ export async function registrarDispositivo(matricula) {
             return;
         }
 
-        console.log("🔥 TOKEN FIREBASE:", token);
+        console.log("🔥 TOKEN FIREBASE: [REDACTED]");
         registrarLog("PUSH", "Token gerado", "SUCESSO");
 
-        /* ================================
-            🚫 EVITA REENVIO DESNECESSÁRIO
-        ================================ */
-
-        const ultimoToken = localStorage.getItem("firebase_token");
-        const ultimaMatricula = localStorage.getItem("firebase_matricula");
+        const ultimoToken = sessionStorage.getItem("firebase_token");
+        const ultimaMatricula = sessionStorage.getItem("firebase_matricula");
 
         if (ultimoToken === token && ultimaMatricula === matricula) {
-            registrarLog("PUSH", "Token já registrado anteriormente", "INFO");
+            registrarLog("PUSH", "Token já registrado na sessão", "INFO");
             return;
         }
-
-        /* ================================
-            📡 ENVIO PARA GAS
-        ================================ */
 
         const result = await apiClient.post("salvar_token", { matricula, token });
 
         if (result?.success) {
-            localStorage.setItem("firebase_token", token);
-            localStorage.setItem("firebase_matricula", matricula);
+            sessionStorage.setItem("firebase_token", token);
+            sessionStorage.setItem("firebase_matricula", matricula);
             registrarLog("PUSH", "Dispositivo registrado no servidor", "SUCESSO");
         } else {
             registrarLog(
