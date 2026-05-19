@@ -1,31 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-   <link rel="icon" href="./favicon.ico" type="image/x-icon">
-  <title>Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <title>Admin - DERSO</title>
 
   <style>
     body {
-      font-family: Arial;
-      background: #f4f6f9;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #eef3f9, #dfeaf7);
       margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .login-box, .dashboard {
-      width: 350px;
-      margin: 100px auto;
+      width: min(92vw, 380px);
+      margin: 40px auto;
       background: #fff;
       padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(16, 43, 79, 0.12);
+      box-sizing: border-box;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #1a3c6e;
+      font-size: 1.4rem;
+      text-align: center;
     }
 
     input, button {
       width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      border-radius: 5px;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+
+    input:focus {
+      border-color: #1a3c6e;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(26, 60, 110, 0.15);
     }
 
     button {
@@ -33,9 +55,51 @@
       color: white;
       border: none;
       cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.1s ease, opacity 0.2s ease, background-color 0.2s ease;
     }
 
-    .hidden { display: none; }
+    button:hover {
+      background: #1a252f;
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    /* Variação visual para o botão de logout */
+    #btnLogout {
+      background: #962d2d;
+      margin-top: 12px;
+    }
+    
+    #btnLogout:hover {
+      background: #7a2222;
+    }
+
+    .hidden { display: none !important; }
+
+    #erro {
+      margin: 12px 0 0 0;
+      font-size: 0.95rem;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    #boasVindas {
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+      color: #333;
+      text-align: center;
+    }
+
+    #conteudo {
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 
@@ -44,8 +108,8 @@
 <div class="login-box" id="loginBox">
   <h2>Admin Login</h2>
 
-  <input id="matricula" placeholder="Matrícula">
-  <input id="senha" type="password" placeholder="Senha">
+  <input id="matricula" placeholder="Matrícula" type="text" autocomplete="username">
+  <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
 
   <button id="btnLogin">Entrar</button>
 
