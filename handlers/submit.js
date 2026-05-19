@@ -6,7 +6,7 @@ import { STATE } from "../core/state.js";
 import { registrarLog } from "../services/logger.js";
 import { limparRascunho } from "../services/storage.js";
 import { UI } from "../ui/manager.js";
-import { normalizarMatricula, estaEmCooldown } from "../core/utils.js";
+import { normalizarMatricula, estaEmCooldown, sanitizarHTML } from "../core/utils.js"; // ✅ Importado o sanitizarHTML por segurança
 
 /* ======================================
    🚫 CONTROLE DE ENVIO
@@ -56,10 +56,10 @@ export async function handleSubmit(e) {
     const agora = Date.now();
 
     if (estaEmCooldown(STATE.ultimoEnvio, 3000)) {
-    registrarLog("BLOQUEIO", "Tentativa muito rápida", "AVISO");
-    UI.modal.show("AGUARDE", "Espere alguns segundos antes de enviar novamente.", "⏳", "orange");
-    return;
-}
+        registrarLog("BLOQUEIO", "Tentativa muito rápida", "AVISO");
+        UI.modal.show("AGUARDE", "Espere alguns segundos antes de enviar novamente.", "⏳", "orange");
+        return;
+    }
 
     const matriculaLog = matriculaLimpa || "N/A";
 
@@ -76,18 +76,18 @@ export async function handleSubmit(e) {
            Corrigido: apiClient.post em vez de postForm inexistente
         ================================ */
 
-const formData = new FormData(DOM.form);
-formData.set("matricula", matriculaLimpa);
+        const formData = new FormData(DOM.form);
+        formData.set("matricula", matriculaLimpa);
 
-const body = {};
-formData.forEach((v, k) => { body[k] = v; });
-delete body.action;
+        const body = {};
+        formData.forEach((v, k) => { body[k] = v; });
+        delete body.action;
 
-// ✅ FIX: força o nome, pois readonly pode ser ignorado pelo FormData
-const militar = STATE.employeeList?.[matriculaLimpa];
-body.nome = DOM.nome?.value?.trim() || militar?.nome || "";
+        // ✅ FIX: força o nome, pois readonly pode ser ignorado pelo FormData
+        const militar = STATE.employeeList?.[matriculaLimpa];
+        body.nome = DOM.nome?.value?.trim() || militar?.nome || "";
 
-const result = await apiClient.post("submit", body);
+        const result = await apiClient.post("submit", body);
 
         /* ================================
            ✅ SUCESSO
@@ -130,9 +130,12 @@ const result = await apiClient.post("submit", body);
             ? "O servidor demorou para responder."
             : "Não foi possível enviar sua solicitação.";
 
+        // ✅ CORREÇÃO XSS & DESIGN: Trocado <br> por \n para renderizar de forma segura e elegante via textContent
+        const textoSeguro = `${mensagem}\n\nVerifique sua internet e tente novamente.`;
+
         UI.modal.show(
             "ERRO DE CONEXÃO",
-            `${mensagem}<br><br>Verifique sua internet e tente novamente.`,
+            textoSeguro,
             "📡",
             "red"
         );
@@ -189,5 +192,6 @@ function tratarErroServidor(response) {
         return;
     }
 
-    UI.modal.show("ERRO", mensagem, "❌", "red");
+    // ✅ CORREÇÃO EXTRA CONTRA XSS: Garantimos que o 'mensagem' vindo de fora seja limpo antes de ir para a tela
+    UI.modal.show("ERRO", sanitizarHTML(mensagem), "❌", "red");
 }
