@@ -96,61 +96,15 @@ export function sanitizeAPIResponse(data) {
     return sanitized;
 }
 
-/* ======================================
-   ⏱️ TEMPO
-====================================== */
-
 /**
- * Retorna true se o intervalo mínimo em ms
- * ainda não passou desde o timestamp dado
- * @param {number} ultimoTimestamp
- * @param {number} intervaloMs
- * @returns {boolean}
- */
-export function estaEmCooldown(ultimoTimestamp, intervaloMs) {
-    return Date.now() - ultimoTimestamp < intervaloMs;
-}
-
-/**
- * Promise que resolve após N milissegundos
- * @param {number} ms
- * @returns {Promise<void>}
- */
-export function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/* ======================================
-   🧹 OBJETO / ARRAY
-====================================== */
-
-/**
- * Retorna true se o valor é um array não-vazio
- * @param {*} valor
- * @returns {boolean}
- */
-export function isArrayValido(valor) {
-    return Array.isArray(valor) && valor.length > 0;
-}
-
-/**
- * Retorna true se o valor é um objeto simples não-nulo
- * @param {*} valor
- * @returns {boolean}
- */
-export function isObjeto(valor) {
-    return valor !== null && typeof valor === "object" && !Array.isArray(valor);
-}
-
-/* ======================================
-   🛡️ SANITIZAÇÃO INTELIGENTE
-====================================== */
-
-/**
- * Sanitizador que permite HTML legítimo (com whitelist)
+ * Sanitizador inteligente que permite HTML legítimo (com whitelist)
  * mas bloqueia scripts e event handlers XSS.
  * 
  * Usado para renderizar histórico formatado com segurança.
+ * 
+ * Tags permitidas: DIV, SPAN, B, STRONG, I, EM, U, SMALL, BR
+ * Atributos permitidos: style, class, id
+ * Propriedades CSS seguras: color, background-color, font-weight, margin, padding, etc
  * 
  * @param {string} html - HTML a ser sanitizado
  * @returns {string} - HTML limpo e seguro
@@ -275,4 +229,50 @@ export function sanitizeHTMLContent(html) {
 
     // 6️⃣ Retorna HTML limpo
     return tempDiv.innerHTML;
+}
+
+/* ======================================
+   ⏱️ TEMPO
+====================================== */
+
+/**
+ * Retorna true se o intervalo mínimo em ms
+ * ainda não passou desde o timestamp dado
+ * @param {number} ultimoTimestamp
+ * @param {number} intervaloMs
+ * @returns {boolean}
+ */
+export function estaEmCooldown(ultimoTimestamp, intervaloMs) {
+    return Date.now() - ultimoTimestamp < intervaloMs;
+}
+
+/**
+ * Promise que resolve após N milissegundos
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+export function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/* ======================================
+   🧹 OBJETO / ARRAY
+====================================== */
+
+/**
+ * Retorna true se o valor é um array não-vazio
+ * @param {*} valor
+ * @returns {boolean}
+ */
+export function isArrayValido(valor) {
+    return Array.isArray(valor) && valor.length > 0;
+}
+
+/**
+ * Retorna true se o valor é um objeto simples não-nulo
+ * @param {*} valor
+ * @returns {boolean}
+ */
+export function isObjeto(valor) {
+    return valor !== null && typeof valor === "object" && !Array.isArray(valor);
 }
