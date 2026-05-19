@@ -1,6 +1,7 @@
 // ui/manager.js
 import { DOM } from "../core/dom.js";
 import { CONFIG } from "../core/config.js";
+import { sanitizarHTML } from "../core/utils.js"; // ✅ Importando sua função de proteção unificada
 
 /* ======================================
    🎛️ UI MANAGER
@@ -23,6 +24,7 @@ export const UI = {
             let historyContent = document.getElementById("historyContent");
 
             if (!modalTitle || !modalText || !modalIcon || !modalClose) {
+                // Aqui a string HTML é estática e segura (escrita por você)
                 DOM.modal.innerHTML = `
                     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
                         <span id="modalIcon" aria-hidden="true">ℹ️</span>
@@ -60,7 +62,7 @@ export const UI = {
             DOM.modal.style.display = "flex";
             document.body.classList.add("modal-open");
 
-            // Preenchimento de dados
+            // ✅ TOTALMENTE SEGURO: textContent neutraliza qualquer tag de injeção maliciosa
             if (modalTitle) modalTitle.textContent = title;
             
             if (modalIcon) {
@@ -72,19 +74,23 @@ export const UI = {
                 if (showHistory) {
                     modalText.innerHTML = "";
                 } else {
-                    modalText.innerHTML = text;
+                    // ✅ CORREÇÃO XSS: Modais comuns agora renderizam estritamente como texto puro.
+                    // Para pular linhas, use strings com '\n' (ex: "Linha 1\n\nLinha 2")
+                    modalText.textContent = text;
                 }
             }
 
             // Controle do Histórico
             if (historyContent) {
-    historyContent.classList.toggle("is-hidden", !showHistory);
-    if (showHistory) {
-        historyContent.innerHTML = text; // ✅ coloca o HTML aqui
-    } else {
-        historyContent.innerHTML = "";
-    }
-}
+                historyContent.classList.toggle("is-hidden", !showHistory);
+                if (showHistory) {
+                    // ✅ CORREÇÃO XSS: Se o histórico for carregar logs que usam tags HTML legítimas,
+                    // nós passamos a variável pelo filtro sanitizarHTML para desarmar scripts perigosos.
+                    historyContent.innerHTML = sanitizarHTML(text);
+                } else {
+                    historyContent.innerHTML = "";
+                }
+            }
         },
 
         close() {
