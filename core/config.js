@@ -6,22 +6,23 @@
 const getEnvVar = (key, defaultValue = undefined) => {
     let value = undefined;
 
+    // ✅ SOLUÇÃO DEFINITIVA: Acessa o objeto de forma indireta e isolada. 
+    // Se o ambiente não der suporte a módulos/Vite, o catch captura sem quebrar o script.
     try {
-        // ✅ Correção Antifalha: Verifica a existência do 'import.meta.env' de forma tradicional 
-        // para evitar o erro 'Unexpected token ?.' em navegadores antigos ou WebViews.
-        if (typeof import !== 'undefined' && import.meta && import.meta.env) {
-            value = import.meta.env[key];
+        const globalModule = Function('return this')();
+        if (globalModule && globalModule.import && globalModule.import.meta && globalModule.import.meta.env) {
+            value = globalModule.import.meta.env[key];
         }
     } catch (e) {
-        // Ignora falhas de escopo isoladas do import.meta no ecossistema estático puro
+        // Ignora falhas de ambientes que não possuem suporte a ESM/Vite
     }
 
-    // ✅ Segundo Fallback: Se não achou via build, busca no objeto global window do navegador (modelo estático)
+    // ✅ Segundo Fallback: Objeto global do DERSO (Modelo Estático PWA)
     if (typeof value === 'undefined' && typeof window !== 'undefined' && window.DERSO_CONFIG) {
         value = window.DERSO_CONFIG[key];
     }
 
-    // ✅ Retorna o valor encontrado ou o padrão seguro com dados de produção do batalhão
+    // ✅ Retorna o valor limpo ou a chave real do DERSO como padrão seguro
     return typeof value !== 'undefined' ? value : defaultValue;
 };
 
