@@ -92,6 +92,6 @@ if (!CONFIG.API_URL) {
 }
 
 if (CONFIG.DEBUG) {
-    console.warn('🟡 DEBUG MODE ENABLED - This should be disabled in production!');
+    console.warn('🟡 DEBUG MODE ENABLED - CONFIG exposed to window');
     window.CONFIG = CONFIG;
 }
