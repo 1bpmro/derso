@@ -1,4 +1,4 @@
-// core/config.js
+// core/config.js (v9.5.7 - Hardening e Centralização Ativa)
 export const CONFIG = Object.freeze({
     API_URL: "https://script.google.com/macros/s/AKfycbyRZe-Dsc-aKFRwkfRuGPWnstsC-yr7jRfrZGPwunmScbcu_7psRE4lErC-n3GhMN_weg/exec",
     VERSAO: "9.5.7",
@@ -10,6 +10,19 @@ export const CONFIG = Object.freeze({
         "pm.ro.gov.br"
     ],
     ADMIN_EMAIL: "ti1bpmro@gmail.com",
+
+    /* ======================================
+       🔥 CONFIGURAÇÕES DO FIREBASE & PUSH
+       (Centralizado a pedido da auditoria)
+    ====================================== */
+    FIREBASE: {
+        apiKey: "AIzaSyDqAtLFEwpxN2Yhju8X8I0QeHWR66copLc",
+        authDomain: "derso-8294b.firebaseapp.com",
+        projectId: "derso-8294b",
+        messagingSenderId: "1056159074696",
+        appId: "1:1056159074696:web:90962abec6bf703c5d923d"
+    },
+    VAPID_KEY: "BHGFjPdrcahFdPsIVDsA4RA04ArqgiVslZgoZXjwm49O-au9z4hN2TLNQfhYsWdRQnEkZ4khJCaSb-S09dSolkc",
 
     /* ======================================
        ⚙️ CONFIGURAÇÕES DE SISTEMA
