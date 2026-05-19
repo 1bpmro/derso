@@ -1,7 +1,7 @@
 // ui/manager.js
 import { DOM } from "../core/dom.js";
 import { CONFIG } from "../core/config.js";
-import { sanitizarHTML } from "../core/utils.js"; // ✅ Importando sua função de proteção unificada
+import { sanitizeHTMLContent } from "../core/utils.js";
 
 /* ======================================
    🎛️ UI MANAGER
@@ -24,7 +24,6 @@ export const UI = {
             let historyContent = document.getElementById("historyContent");
 
             if (!modalTitle || !modalText || !modalIcon || !modalClose) {
-                // Aqui a string HTML é estática e segura (escrita por você)
                 DOM.modal.innerHTML = `
                     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
                         <span id="modalIcon" aria-hidden="true">ℹ️</span>
@@ -62,6 +61,7 @@ export const UI = {
             DOM.modal.style.display = "flex";
             document.body.classList.add("modal-open");
 
+            // ✅ Título sempre seguro (textContent)
             if (modalTitle) modalTitle.textContent = title;
             
             if (modalIcon) {
@@ -69,8 +69,8 @@ export const UI = {
                 modalIcon.style.color = color;
             }
 
-            // ✅ DETECÇÃO REFORÇADA: Se o texto contiver qualquer indício de estrutura HTML 
-            // do histórico (div, span, classes ou estilo em linha), tratamos como histórico legítimo.
+            // ✅ DETECÇÃO DE HISTÓRICO: Se contiver indícios de HTML estruturado
+            // (div, span, folga, style) OU showHistory=true, renderizar como histórico
             const stringLimpa = String(text).toLowerCase();
             const possuiHTML = stringLimpa.includes("<div") || 
                                stringLimpa.includes("<span") || 
@@ -81,22 +81,23 @@ export const UI = {
 
             if (modalText) {
                 if (exibirComoHistorico) {
+                    // ✅ PARA HISTÓRICO: Limpa e prepara a área
                     modalText.innerHTML = "";
-                    modalText.style.display = "none"; // Desativa o bloco de erro/aviso comum
+                    modalText.style.display = "none";
                 } else {
+                    // ✅ PARA MENSAGENS: Exibe como texto puro seguro
                     modalText.style.display = "block";
-                    modalText.textContent = text; // Se for aviso simples, vira texto puro seguro
+                    modalText.textContent = text;
                 }
             }
 
-            // Controle e injeção do Histórico formatado
+            // ✅ Renderiza histórico com sanitização inteligente
             if (historyContent) {
                 historyContent.classList.toggle("is-hidden", !exibirComoHistorico);
                 if (exibirComoHistorico) {
-                    // ✅ AJUSTE DE DECODIFICAÇÃO: Converte caracteres como &#x2F; em barras reais 
-                    // e passa pelo filtro sanitizarHTML para renderizar as caixas de folga perfeitamente.
-                    let htmlDecodificado = text.replace(/&#x2F;/g, "/");
-                    historyContent.innerHTML = sanitizarHTML(htmlDecodificado);
+                    // ✅ SANITIZAÇÃO: Permite HTML legítimo (divs, spans, estilos)
+                    // mas bloqueia scripts, event handlers e XSS
+                    historyContent.innerHTML = sanitizeHTMLContent(text);
                 } else {
                     historyContent.innerHTML = "";
                 }
