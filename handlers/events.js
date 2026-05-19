@@ -9,7 +9,7 @@ import { apiClient } from "../core/apiClient.js";
 import { UI } from "../ui/manager.js";
 import { applyInstitutionalTheme } from "../services/theme.js";
 import { fetchHistory } from "../features/history.js";
-import { normalizarMatricula, validarEmail, sanitizarHTML } from "../core/utils.js";
+import { normalizarMatricula, validarEmail, sanitizarHTML } from "../core/utils.js"; // ✅ Perfeito: sanitizarHTML já importado aqui
 
 /* ======================================
    🧠 CONTROLE INTERNO
@@ -22,7 +22,6 @@ let eventosRegistrados = false;
 ====================================== */
 
 export function setupEvents() {
-    // Corrigido: não depende de window.__ADMIN_MODE__
     if (eventosRegistrados) {
         registrarLog("EVENTOS", "Eventos já registrados", "AVISO");
         return;
@@ -122,7 +121,6 @@ function setupMatriculaValidation() {
         const valorRaw = DOM.matricula.value;
         if (!valorRaw.trim()) return;
 
-        // Corrigido: usa utilitário centralizado
         const valor = normalizarMatricula(valorRaw);
         DOM.matricula.value = valor;
         localStorage.setItem("matricula_usuario", valor);
@@ -165,7 +163,6 @@ function setupFormulario() {
 
 function setupHistorico() {
     DOM.btnHistory?.addEventListener("click", () => {
-        // Corrigido: delega para fetchHistory de features/history.js
         fetchHistory(DOM.matricula?.value);
     });
 
@@ -198,7 +195,6 @@ async function abrirPortaAdmin() {
     UI.loading.show("Autenticando administrador...");
 
     try {
-        // ✅ Perfeito: Agora o apiClient cuida da estrutura interna do JSON
         const result = await apiClient.post("adminlogin", {
             matricula: String(login).trim(),
             senha: String(senha).trim()
@@ -216,9 +212,10 @@ async function abrirPortaAdmin() {
                 "SUCESSO"
             );
 
+            // ✅ CORREÇÃO XSS: Nome do administrador higienizado antes de ir para a UI
             UI.modal.show(
                 "ACESSO LIBERADO",
-                `Bem-vindo, ${result.nome}`,
+                `Bem-vindo, ${sanitizarHTML(result.nome)}`,
                 "🛡️",
                 "#2E7D32"
             );
@@ -238,9 +235,10 @@ async function abrirPortaAdmin() {
 
             const msgErro = result?.message || "Credenciais inválidas.";
 
+            // ✅ CORREÇÃO XSS: Mensagem de erro retornada pela API devidamente limpa
             UI.modal.show(
                 "ACESSO NEGADO",
-                msgErro,
+                sanitizarHTML(msgErro),
                 "🚫",
                 "red"
             );
