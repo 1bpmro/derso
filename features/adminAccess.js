@@ -30,7 +30,6 @@ async function login() {
     const senha = document.getElementById("senha")?.value?.trim();
     const erro = document.getElementById("erro");
 
-    // Corrigido: checa existência do elemento antes de usar
     if (!erro) {
         console.warn("⚠️ Elemento #erro não encontrado");
         emLogin = false;
@@ -49,13 +48,12 @@ async function login() {
         const data = await apiClient.post("adminlogin", { matricula, senha });
 
         if (data?.autorizado) {
-            localStorage.setItem("adminToken", data.token);
+            // ✅ Persistência em sessionStorage (segurança contra sessão grudada)
+            sessionStorage.setItem("adminToken", data.token);
 
-            // Corrigido: sanitiza nome antes de usar no HTML
+            // ✅ Sanitização rigorosa antes do armazenamento
             const nomeSeguro = sanitizarHTML(data.nome);
-            localStorage.setItem("adminNome", nomeSeguro);
-
-            localStorage.removeItem("ADMIN_UNLOCK");
+            sessionStorage.setItem("adminNome", nomeSeguro);
 
             abrirDashboard();
         } else {
@@ -78,17 +76,16 @@ function abrirDashboard() {
     document.getElementById("loginBox")?.classList.add("hidden");
     document.getElementById("dashboard")?.classList.remove("hidden");
 
-    const nome = localStorage.getItem("adminNome") ?? "Admin";
+    // ✅ Leitura segura via sessionStorage
+    const nome = sessionStorage.getItem("adminNome") ?? "Admin";
 
     const boasVindas = document.getElementById("boasVindas");
     if (boasVindas) {
-        // Nome já foi sanitizado no momento do save
         boasVindas.innerHTML = `Bem-vindo, <b>${nome}</b>`;
     }
 }
 
 function abrirDashboardSeLogado() {
-    // Corrigido: usa canOpenAdmin() em vez de checar token diretamente
     if (canOpenAdmin()) {
         abrirDashboard();
     }
@@ -99,13 +96,15 @@ function abrirDashboardSeLogado() {
 ========================= */
 
 async function listarFuncionarios() {
-    const token = localStorage.getItem("adminToken");
+    // ✅ Token recuperado da sessão volátil
+    const token = sessionStorage.getItem("adminToken");
 
     try {
         const data = await apiClient.get("lista", { token });
 
+        // ✅ Sanitização de cada entrada para evitar XSS injetado na base de dados
         const html = Array.isArray(data)
-            ? data.map(f => `${f.nome} - ${f.matricula}<br>`).join("")
+            ? data.map(f => `${sanitizarHTML(f?.nome ?? "")} - ${sanitizarHTML(f?.matricula ?? "")}<br>`).join("")
             : "Nenhum resultado.";
 
         const conteudo = document.getElementById("conteudo");
@@ -122,8 +121,11 @@ async function listarFuncionarios() {
 ========================= */
 
 function logout() {
-    // Corrigido: remove apenas os itens do admin, não tudo
+    // ✅ Limpeza dupla para garantir remoção total em ambos os locais
+    sessionStorage.removeItem("adminToken");
+    sessionStorage.removeItem("adminNome");
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminNome");
+    
     location.href = "/";
 }
