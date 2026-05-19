@@ -141,3 +141,138 @@ export function isArrayValido(valor) {
 export function isObjeto(valor) {
     return valor !== null && typeof valor === "object" && !Array.isArray(valor);
 }
+
+/* ======================================
+   🛡️ SANITIZAÇÃO INTELIGENTE
+====================================== */
+
+/**
+ * Sanitizador que permite HTML legítimo (com whitelist)
+ * mas bloqueia scripts e event handlers XSS.
+ * 
+ * Usado para renderizar histórico formatado com segurança.
+ * 
+ * @param {string} html - HTML a ser sanitizado
+ * @returns {string} - HTML limpo e seguro
+ */
+export function sanitizeHTMLContent(html) {
+    if (typeof html !== 'string') {
+        return String(html || '');
+    }
+
+    // 1️⃣ Rejeita patterns XSS conhecidos
+    const xssPatterns = [
+        /<script[^>]*>[\s\S]*?<\/script>/gi,      // Scripts
+        /javascript:/gi,                            // javascript: protocol
+        /on\w+\s*=/gi,                              // Event handlers (onclick, onerror, etc)
+        /<iframe/gi,                                // Iframes
+        /<embed/gi,                                 // Embeds
+        /<object/gi,                                // Objects
+        /<link/gi,                                  // Links
+        /<meta/gi,                                  // Meta tags
+        /<base/gi,                                  // Base tags
+        /data:/gi                                   // Data URIs
+    ];
+
+    let sanitized = html;
+    for (const pattern of xssPatterns) {
+        sanitized = sanitized.replace(pattern, '');
+    }
+
+    // 2️⃣ Cria container DOM para parser
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = sanitized;
+
+    // 3️⃣ Whitelist de tags permitidas
+    const allowedTags = ['DIV', 'SPAN', 'B', 'STRONG', 'I', 'EM', 'U', 'SMALL', 'BR'];
+    const allowedAttributes = ['style', 'class', 'id'];
+
+    // 4️⃣ Whitelist de propriedades CSS seguras
+    const safeStyleProps = [
+        'color', 
+        'background-color', 
+        'font-weight', 
+        'margin', 
+        'padding', 
+        'font-size', 
+        'text-align', 
+        'display', 
+        'flex', 
+        'justify-content', 
+        'border', 
+        'border-bottom', 
+        'overflow', 
+        'overflow-y', 
+        'max-height', 
+        'padding-right',
+        'gap'
+    ];
+
+    // 5️⃣ Função recursiva para limpar nodes
+    function cleanNodes(node) {
+        const children = Array.from(node.childNodes);
+
+        children.forEach(child => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                const tag = child.tagName;
+
+                // ✅ Tag permitida?
+                if (!allowedTags.includes(tag)) {
+                    // ❌ Não permitida: substitui por seu textContent
+                    const text = document.createTextNode(child.textContent);
+                    node.replaceChild(text, child);
+                    return;
+                }
+
+                // ✅ Limpa atributos não-permitidos
+                const attrs = Array.from(child.attributes);
+                attrs.forEach(attr => {
+                    if (!allowedAttributes.includes(attr.name)) {
+                        child.removeAttribute(attr.name);
+                    } else if (attr.name === 'style') {
+                        // ⚠️ Valida style para evitar injeção CSS
+                        const style = attr.value;
+                        
+                        // Rejeita styles perigosos
+                        if (
+                            /expression\s*\(/i.test(style) ||  // IE expressions
+                            /javascript:/i.test(style) ||
+                            /behavior:/i.test(style) ||
+                            /import\s+/i.test(style) ||
+                            /@import/i.test(style)
+                        ) {
+                            child.removeAttribute('style');
+                            return;
+                        }
+
+                        // Filtra apenas propriedades seguras
+                        const props = style.split(';').map(p => p.trim()).filter(p => p);
+                        const cleanedProps = props.filter(prop => {
+                            const [key] = prop.split(':');
+                            return safeStyleProps.some(safe => 
+                                safe.toLowerCase() === key.trim().toLowerCase()
+                            );
+                        });
+
+                        if (cleanedProps.length > 0) {
+                            child.setAttribute('style', cleanedProps.join('; '));
+                        } else {
+                            child.removeAttribute('style');
+                        }
+                    }
+                });
+
+                // ✅ Recursivo: limpa filhos
+                cleanNodes(child);
+            } else if (child.nodeType !== Node.TEXT_NODE) {
+                // ❌ Remove outros tipos de nodes (comments, etc)
+                node.removeChild(child);
+            }
+        });
+    }
+
+    cleanNodes(tempDiv);
+
+    // 6️⃣ Retorna HTML limpo
+    return tempDiv.innerHTML;
+}
