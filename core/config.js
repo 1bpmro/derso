@@ -12,6 +12,13 @@ export const CONFIG = Object.freeze({
     ADMIN_EMAIL: "ti1bpmro@gmail.com",
 
     /* ======================================
+       🔒 POLÍTICAS DE AUTENTICAÇÃO (NOVO)
+    ====================================== */
+    ADMIN_SESSION_TIMEOUT: 30 * 60 * 1000, // 30 minutos de sessão ativa
+    MAX_LOGIN_ATTEMPTS: 5,                // Bloqueia após 5 erros seguidos
+    LOGIN_LOCKOUT_TIME: 15 * 60 * 1000,    // Tempo de bloqueio: 15 minutos
+
+       /* ======================================
        🔥 CONFIGURAÇÕES DO FIREBASE & PUSH
        (Centralizado a pedido da auditoria)
     ====================================== */
