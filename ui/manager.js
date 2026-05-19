@@ -70,10 +70,18 @@ export const UI = {
                 modalIcon.style.color = color;
             }
 
+            // ✅ DETECÇÃO INTELIGENTE: Se a chamada não marcou explicitamente showHistory, mas o texto
+            // claramente contém a estrutura HTML de tabelas/divs do histórico enviado pelo servidor,
+            // nós forçamos o chaveamento para o fluxo do histórico para não quebrar o layout.
+            const possuiHTMLHistorico = text && (text.includes("<div") || text.includes("<span"));
+            const exibirComoHistorico = showHistory || possuiHTMLHistorico;
+
             if (modalText) {
-                if (showHistory) {
+                if (exibirComoHistorico) {
                     modalText.innerHTML = "";
+                    modalText.style.display = "none"; // Oculta o bloco de texto simples
                 } else {
+                    modalText.style.display = "block";
                     // ✅ CORREÇÃO XSS: Modais comuns agora renderizam estritamente como texto puro.
                     // Para pular linhas, use strings com '\n' (ex: "Linha 1\n\nLinha 2")
                     modalText.textContent = text;
@@ -82,10 +90,10 @@ export const UI = {
 
             // Controle do Histórico
             if (historyContent) {
-                historyContent.classList.toggle("is-hidden", !showHistory);
-                if (showHistory) {
-                    // ✅ CORREÇÃO XSS: Se o histórico for carregar logs que usam tags HTML legítimas,
-                    // nós passamos a variável pelo filtro sanitizarHTML para desarmar scripts perigosos.
+                historyContent.classList.toggle("is-hidden", !exibirComoHistorico);
+                if (exibirComoHistorico) {
+                    // ✅ CORREÇÃO XSS COM LAYOUT PRESERVADO: Passa as divs de folgas pelo filtro 
+                    // de sanitização antes de injetar, renderizando o layout do Sgt Dione de forma segura!
                     historyContent.innerHTML = sanitizarHTML(text);
                 } else {
                     historyContent.innerHTML = "";
