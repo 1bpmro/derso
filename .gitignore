@@ -1,11 +1,34 @@
-# IDEs
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables (NUNCA COMMIT!)
+.env
+.env.local
+.env.*.local
+
+# IDE
 .vscode/
 .idea/
-
-# Logs e Cache
-*.log
+*.swp
+*.swo
+*~
 .DS_Store
 
-# Documentação de rascunhos pessoais
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
 temp/
-docs/rascunhos/
+tmp/
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store
