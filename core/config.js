@@ -74,7 +74,10 @@ export const CONFIG = Object.freeze({
     // ============================================
     // DEBUG MODE
     // ============================================
-    DEBUG: getEnvVar('VITE_DEBUG', 'false') === 'true',
+    // ✅ INTELIGENTE: true em localhost, false em produção
+DEBUG: getEnvVar('VITE_DEBUG', 
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'true' : 'false'
+) === 'true',
     
     // ============================================
     // SESSION & SECURITY (Exigido pelo core/auth.js)
