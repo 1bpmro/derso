@@ -273,7 +273,10 @@ function renderTabela(lista) {
     const tbody = document.getElementById("table");
     if (!tbody) return;
 
-    tbody.innerHTML = lista.map(v => {
+    // Guardamos a lista filtrada atual na store para o clique saber quem é quem
+    adminStore.listaFiltradaAtual = lista;
+
+    tbody.innerHTML = lista.map((v, index) => {
         const s = adminStore.scoreMap[v.matricula] ?? 0;
 
         const cor =
@@ -281,14 +284,14 @@ function renderTabela(lista) {
             s < 0 ? "#e74c3c" :
             "#7f8c8d";
 
-        // ✅ Uso do escaperHTML previne qualquer injeção por DOM injection
+        // ✅ Adicionado cursor:pointer e o evento abrirDetalhesMilitar
         return `
-        <tr>
+        <tr onclick="abrirDetalhesMilitar(${index})" style="cursor:pointer;" title="Clique para ver os dias solicitados">
             <td>
                 <b>${escaperHTML(v.nome)}</b><br>
                 <small>${escaperHTML(v.matricula)}</small>
             </td>
-            <td style="text-align:center;">
+            <td style="text-align:center; font-weight:bold;">
                 ${v.total || 0}
             </td>
             <td style="text-align:center;color:${cor};font-weight:bold;">
@@ -297,6 +300,36 @@ function renderTabela(lista) {
         </tr>`;
     }).join("");
 }
+
+// 🗓️ [UX UPGRADE]: Abre os detalhes dos dias solicitados em um modal flutuante
+window.abrirDetalhesMilitar = function(index) {
+    const militar = adminStore.listaFiltradaAtual?.[index];
+    if (!militar) return;
+
+    // Se sua API manda os dias em uma string (ex: "05, 12, 19") ou array (ex: ["05", "12"])
+    // Ajustamos aqui para exibir bonito. Altere 'v.dias' pelo nome correto do campo se for diferente!
+    const diasSolicitados = militar.data || militar.detalhes || "Nenhum dia detalhado encontrado.";
+
+    const corpoModal = `
+        <div style="text-align:left; font-size:14px; line-height:1.5;">
+            <p><b>Militar:</b> ${escaperHTML(militar.nome)}</p>
+            <p><b>Matrícula:</b> ${escaperHTML(militar.matricula)}</p>
+            <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+            <p><b>🗓️ Dias Solicitados neste mês:</b></p>
+            <div style="background:#f8f9fa; padding:10px; border-radius:5px; font-family:monospace; font-size:15px; color:#2c3e50; text-align:center; border:1px solid #e2e8f0;">
+                ${escaperHTML(diasSolicitados)}
+            </div>
+        </div>
+    `;
+
+    // Dispara o componente de UI padrão do DERSO
+    UI.modal.show(
+        "DETALHES DA SOLICITAÇÃO", 
+        corpoModal, 
+        "📋", 
+        "var(--azul-marinho)"
+    );
+};
 
 /* ======================================
    📊 KPI
