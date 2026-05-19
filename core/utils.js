@@ -34,7 +34,7 @@ export function validarEmail(valor) {
 }
 
 /* ======================================
-   🔐 SANITIZAÇÃO
+   🔐 SANITIZAÇÃO & SEGURANÇA
 ====================================== */
 
 /**
@@ -49,7 +49,51 @@ export function sanitizarHTML(str) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+        .replace(/'/g, "&#39;")
+        .replace(/\//g, "&#x2F;"); // Adicionado escape de barra para maior cobertura
+}
+
+// 📎 ALIAS DE COMPATIBILIDADE: Mapeia o termo do Copilot para a sua função nativa
+export { sanitizarHTML as escapeHTML };
+
+/**
+ * Remove HTML tags completamente (Retorna apenas texto puro)
+ * @param {string} texto
+ * @returns {string}
+ */
+export function stripHTML(texto) {
+    if (typeof texto !== 'string') {
+        return String(texto || '');
+    }
+    return texto
+        .replace(/<[^>]*>/g, '')
+        .replace(/&[a-z]+;/gi, '')
+        .trim();
+}
+
+/**
+ * Limpa dados estruturados vindos da API recursivamente antes de salvar no State
+ * @param {object} data
+ * @returns {object}
+ */
+export function sanitizeAPIResponse(data) {
+    if (!data || typeof data !== 'object') return {};
+    const sanitized = {};
+    
+    for (const [key, value] of Object.entries(data)) {
+        if (typeof value === 'string') {
+            sanitized[key] = sanitizarHTML(value);
+        } else if (typeof value === 'number' || typeof value === 'boolean') {
+            sanitized[key] = value;
+        } else if (Array.isArray(value)) {
+            sanitized[key] = value.map(item => 
+                typeof item === 'string' ? sanitizarHTML(item) : item
+            );
+        } else if (typeof value === 'object') {
+            sanitized[key] = sanitizeAPIResponse(value);
+        }
+    }
+    return sanitized;
 }
 
 /* ======================================
