@@ -69,34 +69,39 @@ export const UI = {
                 modalIcon.style.color = color;
             }
 
-            // ✅ DETECÇÃO DE HISTÓRICO: Se contiver indícios de HTML estruturado
-            // (div, span, folga, style) OU showHistory=true, renderizar como histórico
+            // ✅ DETECÇÃO: Se é HTML
             const stringLimpa = String(text).toLowerCase();
             const possuiHTML = stringLimpa.includes("<div") || 
                                stringLimpa.includes("<span") || 
                                stringLimpa.includes("folga") ||
                                stringLimpa.includes("style=");
 
-            const exibirComoHistorico = showHistory || possuiHTML;
+            // ✅ Se showHistory=true OU (contém HTML E não é do admin)
+            const renderarComoHistorico = showHistory || (possuiHTML && !text.includes("Militar:"));
+            
+            // ✅ Se contém HTML do admin (tem "Militar:" ou "Matrícula:"), renderizar em modalText
+            const renderarComoAdmin = possuiHTML && text.includes("Militar:");
 
             if (modalText) {
-                if (exibirComoHistorico) {
-                    // ✅ PARA HISTÓRICO: Limpa e prepara a área
+                if (renderarComoHistorico && !renderarComoAdmin) {
+                    // ✅ Histórico normal (lista de datas)
                     modalText.innerHTML = "";
                     modalText.style.display = "none";
+                } else if (renderarComoAdmin) {
+                    // ✅ Detalhes do admin (com Militar, Matrícula, etc)
+                    modalText.style.display = "block";
+                    modalText.innerHTML = sanitizeHTMLContent(text);
                 } else {
-                    // ✅ PARA MENSAGENS: Exibe como texto puro seguro
+                    // ✅ Mensagens normais
                     modalText.style.display = "block";
                     modalText.textContent = text;
                 }
             }
 
-            // ✅ Renderiza histórico com sanitização inteligente
+            // ✅ Renderiza no historyContent se for histórico puro
             if (historyContent) {
-                historyContent.classList.toggle("is-hidden", !exibirComoHistorico);
-                if (exibirComoHistorico) {
-                    // ✅ SANITIZAÇÃO: Permite HTML legítimo (divs, spans, estilos)
-                    // mas bloqueia scripts, event handlers e XSS
+                historyContent.classList.toggle("is-hidden", !renderarComoHistorico || renderarComoAdmin);
+                if (renderarComoHistorico && !renderarComoAdmin) {
                     historyContent.innerHTML = sanitizeHTMLContent(text);
                 } else {
                     historyContent.innerHTML = "";
