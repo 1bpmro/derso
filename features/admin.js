@@ -306,31 +306,57 @@ window.abrirDetalhesMilitar = function(index) {
     const militar = adminStore.listaFiltradaAtual?.[index];
     if (!militar) return;
 
-    // Se sua API manda os dias em uma string (ex: "05, 12, 19") ou array (ex: ["05", "12"])
-    // Ajustamos aqui para exibir bonito. Altere 'v.dias' pelo nome correto do campo se for diferente!
-    const diasSolicitados = militar.data || militar.detalhes || "Nenhum dia detalhado encontrado.";
+    // ✅ CORRIGIDO: Tenta múltiplos nomes de campo (case-insensitive)
+    // A API pode retornar: data, Data, dias, Dias, detalhes, Detalhes
+    const diasSolicitados = 
+        militar.data || 
+        militar.Data || 
+        militar.dias || 
+        militar.Dias || 
+        militar.detalhes || 
+        militar.Detalhes || 
+        "Nenhum dia detalhado encontrado.";
+
+    // ✅ Se diasSolicitados for um array, converter para string formatada
+    let diasFormatados = diasSolicitados;
+    if (Array.isArray(diasSolicitados)) {
+        diasFormatados = diasSolicitados.join(", ");
+    }
 
     const corpoModal = `
-        <div style="text-align:left; font-size:14px; line-height:1.5;">
-            <p><b>Militar:</b> ${escaperHTML(militar.nome)}</p>
-            <p><b>Matrícula:</b> ${escaperHTML(militar.matricula)}</p>
-            <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+        <div style="text-align:left; font-size:14px; line-height:1.6;">
+            <p><b>Militar:</b> ${escaperHTML(militar.nome || militar.Nome || "N/A")}</p>
+            <p><b>Matrícula:</b> ${escaperHTML(militar.matricula || militar.Matrícula || "N/A")}</p>
+            <hr style="border:0; border-top:1px solid #eee; margin:12px 0;">
             <p><b>🗓️ Dias Solicitados neste mês:</b></p>
-            <div style="background:#f8f9fa; padding:10px; border-radius:5px; font-family:monospace; font-size:15px; color:#2c3e50; text-align:center; border:1px solid #e2e8f0;">
-                ${escaperHTML(diasSolicitados)}
+            <div style="
+                background:#f8f9fa; 
+                padding:12px; 
+                border-radius:6px; 
+                font-family:'Courier New', monospace; 
+                font-size:14px; 
+                color:#2c3e50; 
+                border-left:4px solid #1A3C6E;
+                min-height:40px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                text-align:center;
+            ">
+                ${escaperHTML(String(diasFormatados))}
             </div>
         </div>
     `;
 
-    // Dispara o componente de UI padrão do DERSO
+    // ✅ Dispara o modal com showHistory=true para renderizar HTML seguro
     UI.modal.show(
         "DETALHES DA SOLICITAÇÃO", 
         corpoModal, 
         "📋", 
-        "var(--azul-marinho)"
+        "#1A3C6E",
+        false  // false porque o HTML já é escapado e seguro
     );
 };
-
 /* ======================================
    📊 KPI
 ====================================== */
