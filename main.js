@@ -1,5 +1,6 @@
 // main.js - DERSO v9.5.7 CORE ENGINE 🧠⚙️ (HYBRID SAFE BUILD)
 
+import { VERSION_CONTROL } from "./version.js";
 import { CONFIG } from "./core/config.js";
 import { STATE } from "./core/state.js";
 import { DOM } from "./core/dom.js";
@@ -333,9 +334,10 @@ async function bootstrap() {
     APP.bootstrapTime = Date.now();
     clearBadge();
 
+    // AGORA CONSUMINDO A VERSÃO CENTRALIZADA:
     registrarLog(
         "SISTEMA",
-        "Boot v9.5.7 iniciado",
+        `Boot ${VERSION_CONTROL.SISTEMA} iniciado (${VERSION_CONTROL.STATUS})`,
         "INFO"
     );
 
