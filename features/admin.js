@@ -482,3 +482,13 @@ function gerarHTMLAdmin() {
         <canvas id="chart" style="margin-top:20px;max-width:100%"></canvas>
     </div>`;
 }
+
+/* ======================================
+   🧪 DEBUG MODE
+====================================== */
+
+if (CONFIG.DEBUG) {
+    window.adminStore = adminStore;
+    window.escaperHTML = escaperHTML;
+    window.abrirDetalhesMilitar = abrirDetalhesMilitar;
+}
