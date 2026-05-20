@@ -129,7 +129,15 @@
 </div>
 
 <!-- MODAL -->
-<div id="modalMsg" class="modal is-hidden"></div>
+<div id="modalMsg" class="modal is-hidden">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <span id="modalIcon" aria-hidden="true">ℹ️</span>
+        <h3 id="modalTitle">Aviso</h3>
+        <div id="modalText"></div>
+        <div id="historyContent" class="is-hidden"></div>
+        <button id="btnCloseModal" class="btn btn-primary" type="button">FECHAR</button>
+    </div>
+</div>
 
 <!-- ADMIN -->
 <div id="adminLoginModal" class="modal is-hidden">
