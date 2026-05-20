@@ -1,426 +1,898 @@
 /* ==========================================================================
-   🎨 CONFIGURAÇÕES GERAIS E PALETA DE CORES (PADRÃO PMRO / 1º BPM)
+   VARIÁVEIS E CONFIGURAÇÕES GERAIS
    ========================================================================== */
 :root {
-    --primary-color: #1A3C6E;       /* Azul Militar */
-    --primary-hover: #122B52;
-    --accent-color: #2E7D32;        /* Verde Operacional */
-    --bg-color: #F4F6F9;            /* Fundo Light Gray */
-    --card-bg: #FFFFFF;
-    --text-color: #2C3E50;
-    --text-muted: #7F8C8D;
-    --border-color: #BDC3C7;
-    --error-color: #C0392B;
-    --radius-lg: 12px;
-    --radius-md: 8px;
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+    --azul-marinho: #1A3C6E;
+    --azul-hover: #255599;
+    --ouro-brilhante: #FFD700;
+
+    --sucesso-verde: #2E7D32;
+    --alerta-laranja: #ef6c00;
+    --critico-vermelho: #D32F2F;
+
+    --cinza-fundo: #F0F2F5;
+    --branco-card: #ffffff;
+
+    --texto-principal: #333333;
+    --texto-secundario: #666666;
+
+    --borda-padrao: #e1e4e8;
+
+    --raio-padrao: 12px;
+    --sombra-suave: 0 10px 25px rgba(0, 0, 0, 0.05);
+
+    --transicao: all 0.3s ease;
 }
 
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Roboto', sans-serif;
-}
-
-body {
-    background-color: var(--bg-color) !important;
-    color: var(--text-color);
-    padding: 20px 12px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* ==========================================================================
-   📦 CONTAINERS E ESTRUTURA CARD
+   BASE
    ========================================================================== */
-.container {
-    width: 100%;
-    max-width: 540px;
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    padding: 24px;
-    position: relative;
+body {
+    background-color: var(--cinza-fundo);
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 20px 10px;
+    display: flex;
+    justify-content: center;
+    color: var(--texto-principal);
+
+    min-height: 100vh;
+    overflow-x: hidden;
+
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
+}
+
+body.modal-open {
     overflow: hidden;
 }
 
+/* ==========================================================================
+   CONTAINER
+   ========================================================================== */
+.container {
+    width: 100%;
+    max-width: 500px;
+
+    background: var(--branco-card);
+
+    border-radius: var(--raio-padrao);
+
+    padding: 35px 25px;
+
+    box-shadow: var(--sombra-suave);
+
+    position: relative;
+    overflow: hidden;
+
+    animation: fadeIn 0.35s ease;
+}
+
+/* ==========================================================================
+   BARRA DE PROGRESSO
+   ========================================================================== */
 #barraProgresso {
     position: absolute;
     top: 0;
     left: 0;
-    height: 4px;
+
     width: 0%;
-    background: var(--accent-color);
-    transition: width 0.3s ease;
+    height: 6px;
+
+    background: var(--ouro-brilhante);
+
+    transition: width 0.5s ease;
+
+    z-index: 100;
+}
+
+.barra-completa {
+    background: var(--sucesso-verde) !important;
+    box-shadow: 0 0 15px rgba(46,125,50,0.5);
 }
 
 /* ==========================================================================
-   🏛️ HEADER (LOGOS E TÍTULOS)
+   HEADER
    ========================================================================== */
 .header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 25px;
 }
 
 .logos {
     display: flex;
     justify-content: center;
+    align-items: center;
+
     gap: 20px;
-    margin-bottom: 12px;
+
+    margin-bottom: 15px;
 }
 
 .logos img {
-    height: 65px;
+    height: 75px;
     width: auto;
-    object-fit: contain;
+
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+
+    transition: transform 0.25s ease;
 }
 
-.header h2 {
-    color: var(--primary-color);
+.logos img:hover {
+    transform: scale(1.03);
+}
+
+h2 {
+    color: var(--azul-marinho);
+
     font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
+    font-weight: 900;
+
+    margin: 10px 0 0;
+
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 .divisor {
-    height: 2px;
-    background: linear-gradient(to right, transparent, var(--primary-color), transparent);
-    margin: 8px auto 12px auto;
-    width: 80%;
+    width: 70%;
+    height: 3px;
+
+    margin: 12px auto;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--ouro-brilhante),
+            transparent
+        );
 }
 
 .subtitle {
     font-size: 13px;
-    color: var(--text-muted);
+    color: var(--texto-secundario);
+
     line-height: 1.4;
-    padding: 0 10px;
-}
-
-/* ==========================================================================
-   🚨 BOX DE STATUS / PRAZO (CONEXÃO ATIVA)
-   ========================================================================== */
-#prazoBox {
-    background-color: #E8F5E9;
-    border: 1.5px solid var(--accent-color);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.prazoTitulo {
-    display: block;
-    font-size: 12px;
-    color: var(--accent-color);
-    letter-spacing: 1px;
-    font-weight: 900;
-    margin-bottom: 4px;
-}
-
-#timerDisplay {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--primary-color);
-}
-
-#instMessage {
-    font-size: 13px;
-    line-height: 1.4;
-    color: #D35400;
-    background: #FFF3E0;
-    padding: 10px 12px;
-    border-radius: var(--radius-md);
-    margin-bottom: 20px;
     font-weight: 500;
+
+    margin: 0;
 }
 
 /* ==========================================================================
-   📋 CAMPOS DO FORMULÁRIO (INPUTS & LABELS)
-   ========================================================================== */
-.form-group {
-    margin-bottom: 18px;
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 6px;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="date"] {
-    width: 100%;
-    padding: 12px;
-    font-size: 15px;
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-md);
-    color: var(--text-color);
-    background-color: #FAFAFA;
-    transition: all 0.2s ease;
-    outline: none;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="date"]:focus {
-    border-color: var(--primary-color);
-    background-color: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(26, 60, 110, 0.1);
-}
-
-input[readonly] {
-    background-color: #EAEDED;
-    border-color: #BDC3C7;
-    color: #7F8C8D;
-    cursor: not-allowed;
-}
-
-#erroMatricula {
-    font-size: 12px;
-    color: var(--error-color);
-    font-weight: 700;
-    margin-top: 5px;
-}
-
-.form-group small {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 5px;
-}
-
-/* ==========================================================================
-   🎛️ SELETOR DE RADIO EM MATRIZ DE BOTÕES (TIPO DE FOLGA)
-   ========================================================================== */
-.radio-group {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    width: 100%;
-}
-
-.radio-group input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.radio-group label {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #FFFFFF;
-    border: 1.5px solid var(--border-color);
-    padding: 12px 4px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-color);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-bottom: 0;
-    text-align: center;
-}
-
-.radio-group label:hover {
-    background-color: #F2F4F4;
-    border-color: var(--primary-color);
-}
-
-.radio-group input[type="radio"]:checked + label {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #FFFFFF;
-    box-shadow: 0 4px 8px rgba(26, 60, 110, 0.2);
-}
-
-/* ==========================================================================
-   👆 BOTÕES DE AÇÃO (ACTIONS)
-   ========================================================================== */
-.form-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 24px;
-}
-
-.btn {
-    width: 100%;
-    padding: 14px;
-    font-size: 15px;
-    font-weight: 700;
-    border-radius: var(--radius-md);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-}
-
-.btn-primary {
-    background-color: var(--primary-color);
-    color: #FFFFFF;
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-hover);
-}
-
-.btn-outline {
-    background-color: transparent;
-    border: 1.5px solid var(--primary-color);
-    color: var(--primary-color);
-}
-
-.btn-outline:hover {
-    background-color: rgba(26, 60, 110, 0.05);
-}
-
-#consultaFechada {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-#consultaFechada input {
-    text-align: center;
-}
-
-/* ==========================================================================
-   ⏳ LOADING SCREEN
+   LOADING
    ========================================================================== */
 .loading-container {
     display: flex;
     flex-direction: column;
+
     align-items: center;
     justify-content: center;
-    padding: 30px 0;
+
+    width: 100%;
+
+    padding: 60px 0;
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(26, 60, 110, 0.1);
-    border-top-color: var(--primary-color);
+    width: 45px;
+    height: 45px;
+
+    border: 5px solid rgba(26,60,110,0.1);
+    border-left-color: var(--azul-marinho);
+
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 12px;
+
+    animation: spin 1s linear infinite;
+
+    margin-bottom: 20px;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#loadingText {
+    font-size: 13px;
+    font-weight: 700;
+
+    color: var(--azul-marinho);
+
+    text-transform: uppercase;
+    letter-spacing: 1px;
+
+    margin: 0;
 }
 
 /* ==========================================================================
-   🚨 SISTEMA DE MODAIS REFORMULADO (CORREÇÃO DA FAIXA BRANCA)
+   PRAZO / STATUS
    ========================================================================== */
+#prazoBox {
+    padding: 20px;
 
-/* O container principal agora é APENAS a cortina escura semi-transparente */
+    text-align: center;
+
+    border-radius: var(--raio-padrao);
+
+    margin-bottom: 25px;
+
+    border: 2px solid var(--borda-padrao);
+
+    background: #ffffff !important;
+    color: #333333 !important;
+
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+    transition: var(--transicao);
+}
+
+#timerDisplay {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    gap: 5px;
+
+    font-size: 17px;
+    font-weight: 900;
+
+    color: inherit;
+}
+
+.estado-verde {
+    border-color: var(--sucesso-verde) !important;
+    color: var(--sucesso-verde) !important;
+}
+
+.estado-alerta {
+    border-color: var(--alerta-laranja) !important;
+    color: #cc5c00 !important;
+}
+
+.estado-critico {
+    border-color: var(--critico-vermelho) !important;
+    color: var(--critico-vermelho) !important;
+}
+
+/* ==========================================================================
+   MENSAGEM INSTITUCIONAL
+   ========================================================================== */
+#instMessage {
+    font-size: 14px;
+    font-weight: 500;
+
+    color: var(--azul-marinho);
+
+    background: rgba(26, 60, 110, 0.05);
+
+    padding: 15px;
+
+    border-left: 5px solid var(--ouro-brilhante);
+
+    margin-bottom: 25px;
+
+    border-radius: 6px;
+
+    text-align: center;
+}
+
+/* ==========================================================================
+   FORMULÁRIO
+   ========================================================================== */
+.form-group {
+    margin-bottom: 22px;
+}
+
+label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    color: #444;
+}
+
+input:not([type="radio"]),
+select,
+textarea {
+    width: 100%;
+
+    padding: 14px;
+
+    border: 2px solid var(--borda-padrao);
+
+    border-radius: 10px;
+
+    font-size: 16px;
+
+    outline: none;
+
+    transition: var(--transicao);
+
+    background: #fff;
+    color: var(--texto-principal);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--azul-marinho);
+
+    box-shadow: 0 0 0 4px rgba(26,60,110,0.1);
+}
+
+/* ==========================================================================
+   RADIO GROUP
+   ========================================================================== */
+.radio-group {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 8px;
+}
+
+.radio-group input {
+    display: none;
+}
+
+.radio-group label {
+    border: 2px solid var(--borda-padrao);
+
+    padding: 12px 2px;
+
+    border-radius: 10px;
+
+    font-size: 12px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    text-align: center;
+
+    background: white;
+
+    transition: var(--transicao);
+}
+
+.radio-group input:checked + label {
+    background: var(--azul-marinho);
+
+    color: var(--ouro-brilhante);
+
+    border-color: var(--azul-marinho);
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 4px 10px rgba(26,60,110,0.2);
+}
+
+/* ==========================================================================
+   BOTÕES
+   ========================================================================== */
+.btn {
+    width: 100%;
+
+    padding: 16px;
+
+    border-radius: 10px;
+
+    border: none;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    transition: var(--transicao);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: var(--azul-marinho);
+    color: #fff;
+
+    box-shadow: 0 5px 15px rgba(26,60,110,0.2);
+}
+
+.btn-primary:hover {
+    background: var(--azul-hover);
+}
+
+.btn-outline {
+    background: transparent;
+
+    border: 2px solid #d1d5db;
+
+    color: var(--texto-secundario);
+
+    font-size: 11px;
+}
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+.footer {
+    text-align: center;
+
+    font-size: 11px;
+
+    color: #888;
+
+    margin-top: 30px;
+    padding-top: 15px;
+
+    border-top: 1px solid rgba(0,0,0,0.05);
+
+    cursor: default !important;
+
+    text-decoration: none;
+
+    pointer-events: auto;
+}
+
+.footer:hover {
+    color: #888;
+    text-decoration: none;
+}
+
+/* ==========================================================================
+   MODAL SYSTEM FIXED (SUPORTE COMPLETO PARA #modalMsg & .modal)
+   ========================================================================== */
 .modal, 
 #modalMsg {
     position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background-color: rgba(30, 41, 59, 0.6) !important; /* Cortina escura fluida */
+    inset: 0 !important;
+
     display: flex !important;
-    justify-content: center !important;
+
     align-items: center !important;
+    justify-content: center !important;
+
+    background: rgba(15, 23, 42, 0.82) !important;
+
+    backdrop-filter: blur(6px) !important;
+
     z-index: 9999 !important;
-    padding: 16px !important;
-    box-sizing: border-box !important;
+
+    padding: 20px !important;
+
+    opacity: 1 !important;
+    visibility: visible !important;
+
+    transition:
+        opacity 0.25s ease,
+        visibility 0.25s ease,
+        backdrop-filter 0.25s ease;
 }
 
-/* 🌟 A MÁGICA AQUI: O fundo branco SÓ vai para o Card interno (div filha) 
-   ou se o modal tiver conteúdo direto, limitando o tamanho para não cobrir a tela */
-.modal > div,
-.modal-content {
-    background-color: #FFFFFF !important;
-    color: #2C3E50 !important;
+/* 🔥 Garante que suma perfeitamente com interatividades liberadas por baixo */
+.modal.is-hidden, 
+#modalMsg.is-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Alvo duplo: Trata o card interno criado por .modal-content OU se o JS injetou direto no #modalMsg */
+.modal-content,
+#modalMsg > div {
+    background: var(--branco-card) !important;
+
+    padding: 30px !important;
+
+    border-radius: var(--raio-padrao) !important;
+
     width: 100% !important;
-    max-width: 360px !important;
-    border-radius: 12px !important;
-    padding: 24px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 16px !important;
+    max-width: 400px !important;
+
     text-align: center !important;
-}
 
-/* Se o seu JavaScript injetar texto DIRETO dentro do #modalMsg (sem div filha),
-   este seletor garante que ele vire um card pequeno e centralizado no meio da tela */
-#modalMsg {
-    background-color: rgba(30, 41, 59, 0.6) !important; /* Mantém a cortina escura de fundo */
-}
-
-/* Caso o JS não crie estrutura interna, criamos um comportamento de "caixa autônoma" */
-#modalMsg:not(:has(div)) {
-    padding: 40px 24px !important;
-}
-
-/* Seletor cirúrgico para formatar o bloco de texto interno sem explodir a tela */
-#modalMsg > p, 
-#modalMsg > span, 
-#modalMsg > h3 {
-    background-color: #FFFFFF !important;
-    padding: 10px 15px !important;
-    border-radius: 8px !important;
-    max-width: 360px !important;
-    margin: 0 auto !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-}
-
-/* Customização dos Textos para Leitura Perfeita */
-.modal h3, #modalMsg h3, 
-.modal strong, #modalMsg strong {
-    color: #1A3C6E !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-}
-
-/* O BOTÃO FECHAR: Forçado a ignorar restrições e receber o clique do usuário */
-.modal button,
-#modalMsg button,
-.modal .btn,
-#modalMsg .btn {
-    width: 100% !important;
-    max-width: 320px !important;
-    margin: 12px auto 0 auto !important;
-    padding: 14px !important;
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    background-color: #1A3C6E !important; /* Azul PMRO */
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-    
-    /* Ativação total do clique físico */
     position: relative !important;
-    z-index: 10010 !important;
-    pointer-events: auto !important;
-    
-    text-transform: uppercase !important;
-    box-shadow: 0 4px 10px rgba(26, 60, 110, 0.3) !important;
-    display: block !important;
+    overflow: hidden !important;
+
+    box-shadow:
+        0 20px 40px rgba(0,0,0,0.3),
+        0 0 0 1px rgba(255,255,255,0.03) !important;
+
+    animation: modalEntrada 0.25s ease-out !important;
 }
 
-.modal button:hover,
-#modalMsg button:hover {
-    background-color: #122B52 !important;
+/* Caso o JS insira o texto cru diretamente no #modalMsg sem criar uma div interna (Evita quebrar a tela) */
+#modalMsg:not(:has(div)) {
+    background: var(--branco-card) !important;
+    max-width: 400px !important;
+    height: auto !important;
+    inset: auto !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    border-radius: var(--raio-padrao) !important;
+    padding: 30px !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+}
+
+.modal-content::before {
+    content: "";
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.08),
+            transparent 35%
+        );
+
+    pointer-events: none;
+}
+
+@keyframes modalEntrada {
+    from {
+        transform: translateY(20px) scale(0.98);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+#modalIcon {
+    font-size: 50px;
+
+    margin-bottom: 15px;
+
+    display: block;
+}
+
+#modalTitle, #modalMsg h3 {
+    font-size: 20px;
+    font-weight: 900;
+
+    margin-bottom: 10px;
+
+    color: var(--azul-marinho);
+
+    text-transform: uppercase;
+}
+
+#modalText, #modalMsg p, #modalMsg span {
+    font-size: 15px;
+
+    color: var(--texto-secundario);
+
+    margin-bottom: 25px;
+
+    line-height: 1.5;
+}
+
+/* Força os botões dentro de qualquer modal a herdarem o clique e o destaque */
+.modal button, #modalMsg button {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+}
+
+/* ==========================================================================
+   HISTÓRICO (AGORA INJETADO DENTRO DO CARD DO MODAL CORRETAMENTE)
+   ========================================================================== */
+.historico-item, #historyContent > div {
+    background: rgba(0,0,0,0.04) !important;
+
+    padding: 12px 15px !important;
+
+    border-radius: 8px !important;
+
+    margin-bottom: 10px !important;
+
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+
+    font-size: 13px !important;
+    font-weight: 600 !important;
+
+    border-left: 4px solid var(--azul-marinho) !important;
+    text-align: left !important;
+}
+
+/* ==========================================================================
+   ADMIN
+   ========================================================================== */
+.admin-wrapper {
+    animation: fadeIn 0.4s ease;
+}
+
+.admin-header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 20px;
+
+    border-bottom: 2px solid var(--ouro-brilhante);
+
+    padding-bottom: 10px;
+}
+
+.btn-exit {
+    background: #eee;
+
+    border: none;
+
+    padding: 5px 12px;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+.admin-stats {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    background: var(--azul-marinho);
+
+    color: white;
+
+    padding: 15px;
+
+    border-radius: 10px;
+
+    text-align: center;
+
+    transition: transform 0.2s ease;
+}
+
+.stat-box:hover {
+    transform: scale(1.02);
+}
+
+.stat-box span {
+    display: block;
+
+    font-size: 24px;
+    font-weight: 900;
+
+    color: var(--ouro-brilhante);
+}
+
+.stat-box label {
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    margin: 0;
+
+    color: #fff;
+
+    opacity: 0.8;
+}
+
+.admin-tools {
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 15px;
+}
+
+.admin-input {
+    flex: 1;
+
+    padding: 10px !important;
+
+    font-size: 14px !important;
+}
+
+select.admin-input {
+    background: white;
+
+    cursor: pointer;
+
+    font-weight: bold;
+
+    color: var(--azul-marinho);
+}
+
+.btn-export {
+    background: var(--sucesso-verde);
+
+    color: white;
+
+    border: none;
+
+    border-radius: 5px;
+
+    padding: 0 15px;
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.admin-table-scroll {
+    max-height: 400px;
+
+    overflow-y: auto;
+
+    border: 1px solid var(--borda-padrao);
+
+    border-radius: 8px;
+}
+
+.admin-table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    background: white;
+}
+
+.admin-table th {
+    position: sticky;
+    top: 0;
+
+    background: #f8f9fa;
+
+    padding: 10px;
+
+    font-size: 11px;
+
+    text-align: left;
+
+    border-bottom: 2px solid var(--borda-padrao);
+}
+
+.admin-table td {
+    padding: 10px;
+
+    border-bottom: 1px solid #eee;
+}
+
+.tag-folga {
+    background: #e3f2fd;
+
+    color: #1a3c6e;
+
+    padding: 3px 8px;
+
+    border-radius: 4px;
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
+#chartFolgas {
+    max-width: 100% !important;
+}
+
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
+.is-hidden {
+    display: none !important;
+}
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+
+    :root {
+        --cinza-fundo: #0f172a;
+        --branco-card: #1e293b;
+
+        --texto-principal: #ffffff;
+        --texto-secundario: #94a3b8;
+
+        --borda-padrao: #334155;
+    }
+
+    label {
+        color: #ffffff !important;
+    }
+
+    input:not([type="radio"]),
+    select,
+    textarea {
+        background: #0f172a;
+        color: white;
+        border-color: #334155;
+    }
+
+    .radio-group label {
+        background: #1e293b;
+        color: #ffffff;
+    }
+
+    #prazoBox {
+        background: #ffffff !important;
+        color: #333333 !important;
+    }
+
+    .admin-table {
+        background: #1e293b;
+        color: white;
+    }
+
+    .admin-table th {
+        background: #0f172a;
+    }
+
+    .admin-table td {
+        border-bottom: 1px solid #334155;
+    }
+
+    .modal-content, #modalMsg > div {
+        background: #1e293b !important;
+    }
+
+    #modalMsg:not(:has(div)) {
+        background: #1e293b !important;
+    }
+
+    #modalTitle, #modalMsg h3 {
+        color: white !important;
+    }
+    
+    #modalText, #modalMsg p, #modalMsg span {
+        color: var(--texto-secundario) !important;
+    }
+    
+    .historico-item, #historyContent > div {
+        background: rgba(255,255,255,0.05) !important;
+        color: #ffffff !important;
+    }
+}
+
+/* ==========================================================================
+   ANIMAÇÕES
+   ========================================================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
