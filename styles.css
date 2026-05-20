@@ -24,13 +24,15 @@
 }
 
 body {
-    background-color: var(--bg-color);
+    background-color: var(--bg-color) !important;
     color: var(--text-color);
     padding: 20px 12px;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
 }
 
 /* ==========================================================================
@@ -47,7 +49,6 @@ body {
     overflow: hidden;
 }
 
-/* Barra de progresso discreta no topo do card */
 #barraProgresso {
     position: absolute;
     top: 0;
@@ -105,7 +106,7 @@ body {
    🚨 BOX DE STATUS / PRAZO (CONEXÃO ATIVA)
    ========================================================================== */
 #prazoBox {
-    background-color: #E8F5E9; /* Verde bem claro reflexo do ativo */
+    background-color: #E8F5E9;
     border: 1.5px solid var(--accent-color);
     border-radius: var(--radius-md);
     padding: 14px;
@@ -128,11 +129,10 @@ body {
     color: var(--primary-color);
 }
 
-/* Mensagem Institucional do Mês */
 #instMessage {
     font-size: 13px;
     line-height: 1.4;
-    color: #D35400; /* Laranja pro ícone de fogo */
+    color: #D35400;
     background: #FFF3E0;
     padding: 10px 12px;
     border-radius: var(--radius-md);
@@ -154,11 +154,6 @@ body {
     font-weight: 700;
     color: var(--primary-color);
     margin-bottom: 6px;
-}
-
-.form-group label.required::after {
-    content: " *";
-    color: var(--error-color);
 }
 
 input[type="text"],
@@ -183,7 +178,6 @@ input[type="date"]:focus {
     box-shadow: 0 0 0 3px rgba(26, 60, 110, 0.1);
 }
 
-/* Estado Readonly para o Nome Automático */
 input[readonly] {
     background-color: #EAEDED;
     border-color: #BDC3C7;
@@ -191,7 +185,6 @@ input[readonly] {
     cursor: not-allowed;
 }
 
-/* Mensagens de Erro inline */
 #erroMatricula {
     font-size: 12px;
     color: var(--error-color);
@@ -210,12 +203,11 @@ input[readonly] {
    ========================================================================== */
 .radio-group {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 colunas perfeitas */
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     width: 100%;
 }
 
-/* Esconde o círculo padrão do HTML */
 .radio-group input[type="radio"] {
     position: absolute;
     opacity: 0;
@@ -223,7 +215,6 @@ input[readonly] {
     height: 0;
 }
 
-/* Transforma a label no botão customizado */
 .radio-group label {
     display: flex;
     justify-content: center;
@@ -237,17 +228,15 @@ input[readonly] {
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-bottom: 0; /* Reseta margem padrão */
+    margin-bottom: 0;
     text-align: center;
 }
 
-/* Efeito de Hover */
 .radio-group label:hover {
     background-color: #F2F4F4;
     border-color: var(--primary-color);
 }
 
-/* Estado Selecionado (Estilo Ativo) */
 .radio-group input[type="radio"]:checked + label {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
@@ -299,7 +288,6 @@ input[readonly] {
     background-color: rgba(26, 60, 110, 0.05);
 }
 
-/* Consulta fechada interna ao prazoBox */
 #consultaFechada {
     margin-top: 12px;
     display: flex;
@@ -312,7 +300,7 @@ input[readonly] {
 }
 
 /* ==========================================================================
-   ⏳ LOADING SCREEN & MODAL
+   ⏳ LOADING SCREEN
    ========================================================================== */
 .loading-container {
     display: flex;
@@ -336,35 +324,11 @@ input[readonly] {
     to { transform: rotate(360deg); }
 }
 
-/* Classes utilitárias globais */
-.is-hidden {
-    display: none !important;
-}
-
 /* ==========================================================================
-   👣 FOOTER
-   ========================================================================== */
-.footer {
-    margin-top: 24px;
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    border-top: 1px solid #EAEDED;
-    padding-top: 12px;
-}
-
-/* ==========================================================================
-   🚨 CORREÇÃO DEFINITIVA: MODAIS, OVERLAYS E CONTRASTE
+   🚨 SISTEMA DE MODAIS REFORMULADO (HINT DE INSTALAÇÃO & FAILS)
    ========================================================================== */
 
-body {
-    overflow-x: hidden;
-    position: relative;
-    background-color: #F4F6F9 !important; /* Força o fundo claro da página */
-}
-
-/* O container do Modal - vira um fundo escurecido semi-transparente leve */
+/* Camada Container: Funciona estritamente como a cortina de fundo */
 .modal, 
 #modalMsg {
     position: fixed !important;
@@ -372,65 +336,79 @@ body {
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background-color: rgba(44, 62, 80, 0.5) !important; /* Cinza escuro com 50% de transparência */
+    background-color: rgba(30, 41, 59, 0.65) !important; /* Cortina escura nítida */
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     z-index: 9999 !important;
-    padding: 16px !important;
+    padding: 20px !important;
     box-sizing: border-box !important;
 }
 
-/* O Card Interno do Modal - Força o fundo BRANCO para dar contraste total com o texto */
+/* Seletor Duplo: Se o JS injetar uma DIV interna OU se injetar texto direto */
 .modal > div,
 #modalMsg > div,
-.modal-content {
-    background: #FFFFFF !important; /* Força fundo branco no card */
-    color: #2C3E50 !important;    /* Força texto escuro legível */
-    width: 100% !important;
-    max-width: 360px !important;
+.modal-content,
+#modalMsg {
+    background-color: #FFFFFF !important; /* Força fundo branco real */
+    color: #2C3E50 !important;             /* Texto escuro legível */
     border-radius: 12px !important;
-    padding: 20px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
-    position: relative !important;
-    z-index: 10000 !important; /* Fica acima do fundo cinza */
+    padding: 24px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 16px !important;
     text-align: center !important;
 }
 
-/* Ajuste dos textos dentro do Modal para legibilidade extrema */
-.modal h3, #modalMsg h3, .modal strong {
-    color: #1A3C6E !important; /* Título em Azul Militar */
+/* Ajustando especificidades caso o #modalMsg tenha virado o próprio card */
+#modalMsg {
+    max-width: 380px !important;
+    margin: 0 auto !important;
+}
+.modal > div, .modal-content {
+    width: 100% !important;
+    max-width: 380px !important;
+}
+
+/* Customização dos Textos dos Modais para Contraste Extremo */
+.modal h3, #modalMsg h3, 
+.modal strong, #modalMsg strong,
+#modalMsg [style*="font-weight"] {
+    color: #1A3C6E !important; /* Títulos em Azul PMRO */
     font-size: 18px !important;
     font-weight: 700 !important;
 }
 
-.modal p, #modalMsg p {
-    color: #2C3E50 !important; /* Corpo do texto em cinza escuro */
+.modal p, #modalMsg p, #modalMsg span {
+    color: #34495E !important; /* Corpo de texto cinza escuro nítido */
     font-size: 14px !important;
-    line-height: 1.4 !important;
+    line-height: 1.5 !important;
 }
 
-/* O Botão Fechar - Totalmente clicável e visível */
+/* O BOTÃO FECHAR: Forçado a aceitar eventos de toque e se destacar */
 .modal button,
 #modalMsg button,
-.modal .btn {
+.modal .btn,
+#modalMsg .btn {
     width: 100% !important;
-    padding: 12px !important;
+    padding: 14px !important;
     font-size: 14px !important;
     font-weight: 700 !important;
-    background-color: #1A3C6E !important; /* Azul PMRO */
-    color: #FFFFFF !important;             /* Texto Branco */
+    background-color: #1A3C6E !important; /* Azul Principal */
+    color: #FFFFFF !important;             /* Letra Branca */
     border: none !important;
     border-radius: 8px !important;
     cursor: pointer !important;
-    pointer-events: auto !important;       /* Garante que o clique funcione */
+    
+    /* Reativação do clique físico no navegador */
     position: relative !important;
-    z-index: 10001 !important;             /* Camada mais alta do modal */
+    z-index: 10005 !important;
+    pointer-events: auto !important;
+    
     text-transform: uppercase !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 4px 6px rgba(26, 60, 110, 0.2) !important;
+    margin-top: 8px !important;
 }
 
 .modal button:hover,
@@ -448,11 +426,17 @@ body {
     width: 100% !important;
 }
 
-#historyContent div {
-    color: #2C3E50 !important;
-}
-
-/* Se a classe is-hidden for aplicada, some sem deixar rastro */
+/* Utilities */
 .is-hidden {
     display: none !important;
+}
+
+.footer {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    border-top: 1px solid #EAEDED;
+    padding-top: 12px;
 }
