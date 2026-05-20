@@ -155,6 +155,7 @@ messaging.onBackgroundMessage((payload) => {
 
   const title = notification.title || "DERSO";
 
+  // Captura chaves adicionais enviadas pelo servidor se houver
   const options = {
     body: notification.body || "Nova atualização disponível.",
     icon: "./assets/icon-192.png",
@@ -162,7 +163,9 @@ messaging.onBackgroundMessage((payload) => {
     vibrate: [200, 100, 200],
     data: {
       url: data.url || "./",
-      eventId: data.eventId || null
+      eventId: data.eventId || "push_geral",
+      // Tenta capturar a matrícula se o backend enviar diretamente no push
+      matricula: data.matricula || null 
     }
   };
 
@@ -170,14 +173,38 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 /* ==========================================================================
-   🖱️ NOTIFICATION CLICK
+   鼠标 ️ NOTIFICATION CLICK (CORRIGIDO - CONTABILIZANDO CLIQUES)
    ========================================================================== */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const destino = event.notification?.data?.url || "./";
+  // 1. Recupera os metadados anexados à notificação
+  const notificationData = event.notification?.data || {};
+  const destino = notificationData.url || "./";
+  const eventId = notificationData.eventId || "sem_id";
+  
+  // 2. Tenta recuperar a matrícula salva localmente no PWA caso o push não traga
+  // Como o SW não acessa localStorage diretamente, faremos o Apps Script linkar pelo eventId,
+  // mas se o push trouxe a matrícula, nós já enviamos direto.
+  const matricula = notificationData.matricula || "pwa_user";
 
-  event.waitUntil(focusOrOpen(destino));
+  // 3. Monta a URL de auditoria para o seu Google Apps Script (a mesma URL do config.js)
+  const baseApiUrl = "https://script.google.com/macros/s/AKfycbyRZe-Dsc-aKFRwkfRuGPWnstsC-yr7jRfrZGPwunmScbcu_7psRE4lErC-n3GhMN_weg/exec";
+  const urlMetrica = `${baseApiUrl}?action=contabilizarClique&eventId=${encodeURIComponent(eventId)}&matricula=${encodeURIComponent(matricula)}&t=${Date.now()}`;
+
+  // 4. Executa a contabilização em background sem travar a abertura da tela do militar
+  const promessaContabilizacao = fetch(urlMetrica, {
+    method: "GET",
+    mode: "no-cors" // Essencial para evitar bloqueios de CORS dentro do Service Worker
+  })
+  .then(() => log("Clique enviado com sucesso para a API do GAS."))
+  .catch((err) => console.error("⚠️ Falha ao registrar métrica de clique:", err));
+
+  // 5. Executa o redirecionamento ou foco da janela
+  const promessaNavegacao = focusOrOpen(destino);
+
+  // Mantém o worker ativo até que o log no servidor e a abertura da aba terminem
+  event.waitUntil(Promise.all([promessaContabilizacao, promessaNavegacao]));
 });
 
 async function focusOrOpen(destino) {
@@ -188,7 +215,7 @@ async function focusOrOpen(destino) {
 
   for (const client of clientsList) {
     if (client.url.includes(destino)) {
-      return client.focus();
+      if ("focus" in client) return client.focus();
     }
   }
 
