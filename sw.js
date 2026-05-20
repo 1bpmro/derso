@@ -2,16 +2,21 @@
    🚀 DERSO PWA - SERVICE WORKER v8 (refatorado)
    ========================================================================== */
 
-const CACHE_NAME = "derso-v8";
+// 1. Importa as configurações de versão dinamicamente antes de gerar o cache!
+importScripts("./version.js");
+
+// 2. O nome do seu cache agora muda AUTOMATICAMENTE quando você atualiza o version.js!
+const CACHE_NAME = `derso-v${self.VERSION_CONTROL.SISTEMA}`;
 
 /* ==========================================================================
    📦 ASSETS ESSENCIAIS
    ========================================================================== */
 const ASSETS_TO_CACHE = [
-  "./",
+"./",
   "./index.html",
   "./styles.css",
   "./main.js",
+  "./version.js", // 👈 Adicione o arquivo de versão na lista de cache!
   "./manifest.json",
   "./assets/icon-192.png",
   "./assets/icon-512.png"
