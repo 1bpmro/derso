@@ -353,3 +353,100 @@ input[readonly] {
     border-top: 1px solid #EAEDED;
     padding-top: 12px;
 }
+
+/* ==========================================================================
+   🚨 CORREÇÃO DOS MODAIS E OVERLAYS (HINT DE INSTALAÇÃO & HISTÓRICO)
+   ========================================================================== */
+
+/* Garante que o corpo da página não crie barras de rolagem fantasmas para a direita */
+body {
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Força qualquer modal ou tela de aviso a virar um Overlay Absoluto Centralizado */
+.modal, 
+#modalMsg {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(0, 0, 0, 0.6) !important; /* Fundo escurecido suave */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 9999 !important; /* Fica acima de absolutamente tudo */
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+/* Estilização da caixinha interna do Modal (o "Card" que aparece no meio) */
+.modal > div,
+#modalMsg > div,
+.modal-content {
+    background: var(--card-bg, #ffffff) !important;
+    width: 100% !important;
+    max-width: 400px !important; /* Tamanho perfeito para o celular */
+    border-radius: var(--radius-lg, 12px) !important;
+    padding: 24px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+    animation: modalSurgir 0.25s ease-out !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+}
+
+/* Ajuste específico para os botões internos de "FECHAR" do modal */
+.modal button,
+#modalMsg button {
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    background-color: var(--primary-color, #1A3C6E) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: var(--radius-md, 8px) !important;
+    cursor: pointer !important;
+    text-transform: uppercase !important;
+}
+
+/* ==========================================================================
+   📂 AJUSTE DA SEÇÃO DE HISTÓRICO (INLINE)
+   ========================================================================== */
+#historyContent {
+    margin-top: 20px !important;
+    border-top: 2px dashed #EAEDED !important;
+    padding-top: 15px !important;
+    width: 100% !important;
+}
+
+/* Formatação das linhas das datas de folga para não quebrarem tortas */
+#historyContent .history-item,
+#historyContent div[style*="display: flex"] {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 0 !important;
+    border-bottom: 1px solid #F4F6F9 !important;
+    font-size: 14px !important;
+}
+
+/* Animação suave para o modal não aparecer do nada */
+@keyframes modalSurgir {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Se a classe is-hidden for aplicada, garante que SUMA mesmo */
+.is-hidden {
+    display: none !important;
+}
