@@ -323,9 +323,9 @@ window.abrirDetalhesMilitar = function(index) {
         diasArray = [];
     }
 
-    // ✅ Formatar os dias em HTML legível
+    // ✅ Formatar os dias em HTML legível com quebra de linhas
     const diasFormatados = diasArray.length > 0
-        ? diasArray.map(d => `<span style="display:inline-block; background:#e3f2fd; color:#1A3C6E; padding:4px 8px; margin:2px; border-radius:4px; font-weight:bold; font-size:13px;">📅 ${escaperHTML(d)}</span>`).join('')
+        ? diasArray.map(d => `<span style="display:inline-block; background:#e3f2fd; color:#1A3C6E; padding:6px 10px; margin:4px; border-radius:4px; font-weight:bold; font-size:12px; white-space:nowrap;">📅 ${escaperHTML(d)}</span>`).join('')
         : '<span style="color:#999; font-style:italic;">Nenhum dia registrado</span>';
 
     const corpoModal = `
@@ -343,7 +343,10 @@ window.abrirDetalhesMilitar = function(index) {
                 background:#f8f9fa; 
                 border-radius:6px;
                 border-left:4px solid #1A3C6E;
-                min-height:50px;
+                min-height:80px;
+                max-height:250px;
+                overflow-y:auto;
+                align-content:flex-start;
             ">
                 ${diasFormatados}
             </div>
@@ -359,7 +362,6 @@ window.abrirDetalhesMilitar = function(index) {
         false
     );
 };
-
 
 /* ======================================
    📊 KPI
