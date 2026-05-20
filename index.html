@@ -2,17 +2,19 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-     <link rel="icon" href="./favicon.ico" type="image/x-icon">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1A3C6E">
 
     <title>DERSO 1º BPM - Solicitação</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="styles.css">
-
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#1A3C6E">
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -23,75 +25,54 @@
 <body>
 
 <div class="container">
-
     <div id="barraProgresso"></div>
 
-    <!-- HEADER MAIS "PESADO" VISUALMENTE -->
     <header class="header">
         <div class="logos">
-            <img src="https://rondonia.ro.gov.br/wp-content/uploads/2024/09/Brasao-PMRO-370x523.png">
-            <img src="https://museu.pm.ro.gov.br/wp-content/uploads/2024/05/1-bpm-3.png">
+            <img src="https://rondonia.ro.gov.br/wp-content/uploads/2024/09/Brasao-PMRO-370x523.png" alt="Brasão PMRO" loading="eager">
+            <img src="https://museu.pm.ro.gov.br/wp-content/uploads/2024/05/1-bpm-3.png" alt="1º BPM" loading="eager">
         </div>
-
         <h2>DERSO 1º BPM</h2>
-
         <div class="divisor"></div>
-
-        <p class="subtitle">
-            Formulário de Solicitação de Diária Especial de Reforço do Serviço Operacional
-        </p>
+        <p class="subtitle">Formulário de Solicitação de Diária Especial de Reforço do Serviço Operacional</p>
     </header>
 
-    <!-- LOADING -->
     <div id="loadingScreen" class="loading-container">
         <div class="spinner"></div>
-        <p id="loadingText">Sincronizando dados com o sistema...</p>
+        <p id="loadingText">Sincronizando dados...</p>
     </div>
 
-    <!-- FORM CONTAINER (AQUI ESTÁ O SEGREDO DO VISUAL) -->
     <div id="formContent" class="is-hidden">
-
-        <section id="prazoBox">
+        <section id="prazoBox" aria-live="polite">
             <strong class="prazoTitulo">STATUS DO SISTEMA</strong>
             <div id="timerDisplay">⌛ CALCULANDO PRAZO...</div>
-
             <div id="consultaFechada" class="is-hidden">
-                <input type="text" id="matriculaConsulta" placeholder="Matrícula para consulta" inputmode="numeric">
-
-                <button type="button" class="btn btn-outline" id="btnHistoryFechado">
-                    📂 VER MINHAS SOLICITAÇÕES
-                </button>
+                <input type="text" id="matriculaConsulta" placeholder="Matrícula para consulta" inputmode="numeric" autocomplete="off">
+                <button type="button" class="btn btn-outline" id="btnHistoryFechado">📂 VER SOLICITAÇÕES</button>
             </div>
         </section>
 
         <div id="instMessage"></div>
 
-        <!-- FORMULÁRIO "CARDIZADO" -->
         <form id="dersoForm">
-
             <div class="form-group">
-                <label for="email" class="required">E-mail</label>
-                <input type="email" id="email" name="email" required>
-                <datalist id="emailProviders"></datalist>
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" required autocomplete="email">
             </div>
 
             <div class="form-group">
-                <label for="matricula" class="required">Matrícula</label>
-                <input type="text" id="matricula" name="matricula" inputmode="numeric" required>
-
-                <span id="erroMatricula" class="is-hidden">
-                    ⚠️ MATRÍCULA NÃO LOCALIZADA
-                </span>
+                <label for="matricula">Matrícula</label>
+                <input type="text" id="matricula" name="matricula" inputmode="numeric" required autocomplete="off">
+                <span id="erroMatricula" class="is-hidden" aria-live="assertive">⚠️ MATRÍCULA NÃO LOCALIZADA</span>
             </div>
 
             <div class="form-group">
                 <label for="nome">Nome Completo</label>
-                <input type="text" id="nome" readonly>
+                <input type="text" id="nome" readonly tabindex="-1">
             </div>
 
             <div class="form-group">
-                <label class="required">Tipo de Folga</label>
-
+                <label>Tipo de Folga</label>
                 <div class="radio-group" id="radioFolga">
                     <input type="radio" id="f24" name="folga" value="24H" required><label for="f24">24H</label>
                     <input type="radio" id="f48" name="folga" value="48H"><label for="f48">48H</label>
@@ -105,58 +86,28 @@
             </div>
 
             <div class="form-group">
-                <label for="data" class="required">Data da Folga</label>
+                <label for="data">Data da Folga</label>
                 <input type="date" id="data" name="data" required>
                 <small id="infoPeriodo"></small>
             </div>
 
-            <!-- BOTÕES COM MAIS PESO VISUAL -->
             <div class="form-actions">
-                <button type="button" class="btn btn-outline" id="btnHistory">
-                    📂 VER MINHAS SOLICITAÇÕES
-                </button>
-
-                <button type="submit" class="btn btn-primary" id="btnEnviar">
-                    ENVIAR SOLICITAÇÃO
-                </button>
+                <button type="button" class="btn btn-outline" id="btnHistory">📂 VER MINHAS SOLICITAÇÕES</button>
+                <button type="submit" class="btn btn-primary" id="btnEnviar">ENVIAR SOLICITAÇÃO</button>
             </div>
-
         </form>
     </div>
 
     <footer class="footer" id="footerText"></footer>
-
 </div>
 
-<!-- MODAL -->
 <div id="modalMsg" class="modal is-hidden"></div>
 
-<!-- ADMIN -->
-<div id="adminLoginModal" class="modal is-hidden">
-    <div class="modal-content">
-
-        <div style="font-size: 50px;">🔐</div>
-
-        <h3>ACESSO ADMINISTRATIVO</h3>
-
-        <input type="text" id="adminMatricula" placeholder="Matrícula" inputmode="numeric">
-
-        <button class="btn btn-primary" id="btnAdminLogin">
-            ENTRAR
-        </button>
-
-    </div>
-</div>
-
 <script type="module" src="main.js"></script>
-
 <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log("PWA ativo:", reg.scope))
-        .catch(err => console.error(err));
-}
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+    }
 </script>
-
 </body>
 </html>
