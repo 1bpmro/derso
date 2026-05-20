@@ -8,7 +8,6 @@ function $(id) {
 export { $ };
 
 function buildDOM() {
-    // Mantive sua lógica original aqui
     const elements = {
         form:               $("dersoForm"),
         email:              $("email"),
@@ -32,7 +31,9 @@ function buildDOM() {
 
     if (CONFIG.DEBUG) {
         Object.entries(elements).forEach(([key, el]) => {
-            if (!el) console.warn(`⚠️ DOM: elemento ausente → "${key}"`);
+            if (!el) {
+                console.warn(`⚠️ DOM: elemento ausente → "${key}"`);
+            }
         });
     }
 
@@ -41,12 +42,20 @@ function buildDOM() {
 
 export let DOM = {};
 
-// --- ALTERAÇÃO AQUI: Execução imediata se o DOM já estiver pronto ---
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-        Object.assign(DOM, buildDOM());
+// Inicialização segura que popula o objeto exportado
+function initDOM() {
+    const targetElements = buildDOM();
+    
+    Object.keys(targetElements).forEach(key => {
+        // Atribui o elemento ou null caso não exista (evita quebra de referências)
+        DOM[key] = targetElements[key] || null;
     });
+}
+
+// --- EXECUÇÃO SEGURA BASEADA NO ESTADO DO DOCUMENTO ---
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDOM);
 } else {
-    // Se o navegador já carregou o HTML, mapeia agora mesmo!
-    Object.assign(DOM, buildDOM());
+    // Se o HTML já foi processado pelo navegador, mapeia imediatamente
+    initDOM();
 }
