@@ -306,57 +306,61 @@ window.abrirDetalhesMilitar = function(index) {
     const militar = adminStore.listaFiltradaAtual?.[index];
     if (!militar) return;
 
-    // ✅ CORRIGIDO: Tenta múltiplos nomes de campo (case-insensitive)
-    // A API pode retornar: data, Data, dias, Dias, detalhes, Detalhes
-    const diasSolicitados = 
-        militar.data || 
-        militar.Data || 
-        militar.dias || 
-        militar.Dias || 
-        militar.detalhes || 
-        militar.Detalhes || 
-        "Nenhum dia detalhado encontrado.";
+    // ✅ CORRIGIDO: O campo correto é 'datas' (array)
+    let diasArray = militar.datas || 
+                    militar.Datas || 
+                    militar.data || 
+                    militar.Data || 
+                    [];
 
-    // ✅ Se diasSolicitados for um array, converter para string formatada
-    let diasFormatados = diasSolicitados;
-    if (Array.isArray(diasSolicitados)) {
-        diasFormatados = diasSolicitados.join(", ");
+    // Se for string, converter para array
+    if (typeof diasArray === 'string') {
+        diasArray = diasArray.split(',').map(d => d.trim());
     }
+
+    // Garantir que é array
+    if (!Array.isArray(diasArray)) {
+        diasArray = [];
+    }
+
+    // ✅ Formatar os dias em HTML legível
+    const diasFormatados = diasArray.length > 0
+        ? diasArray.map(d => `<span style="display:inline-block; background:#e3f2fd; color:#1A3C6E; padding:4px 8px; margin:2px; border-radius:4px; font-weight:bold; font-size:13px;">📅 ${escaperHTML(d)}</span>`).join('')
+        : '<span style="color:#999; font-style:italic;">Nenhum dia registrado</span>';
 
     const corpoModal = `
         <div style="text-align:left; font-size:14px; line-height:1.6;">
-            <p><b>Militar:</b> ${escaperHTML(militar.nome || militar.Nome || "N/A")}</p>
-            <p><b>Matrícula:</b> ${escaperHTML(militar.matricula || militar.Matrícula || "N/A")}</p>
+            <p><b>Militar:</b> ${escaperHTML(militar.nome || "N/A")}</p>
+            <p><b>Matrícula:</b> ${escaperHTML(String(militar.matricula || "N/A"))}</p>
+            <p><b>Total de Dias:</b> ${militar.total || diasArray.length}</p>
             <hr style="border:0; border-top:1px solid #eee; margin:12px 0;">
             <p><b>🗓️ Dias Solicitados neste mês:</b></p>
             <div style="
-                background:#f8f9fa; 
-                padding:12px; 
-                border-radius:6px; 
-                font-family:'Courier New', monospace; 
-                font-size:14px; 
-                color:#2c3e50; 
-                border-left:4px solid #1A3C6E;
-                min-height:40px;
                 display:flex;
-                align-items:center;
-                justify-content:center;
-                text-align:center;
+                flex-wrap:wrap;
+                gap:6px;
+                padding:12px; 
+                background:#f8f9fa; 
+                border-radius:6px;
+                border-left:4px solid #1A3C6E;
+                min-height:50px;
             ">
-                ${escaperHTML(String(diasFormatados))}
+                ${diasFormatados}
             </div>
         </div>
     `;
 
-    // ✅ Dispara o modal com showHistory=true para renderizar HTML seguro
+    // ✅ Dispara o modal
     UI.modal.show(
         "DETALHES DA SOLICITAÇÃO", 
         corpoModal, 
         "📋", 
         "#1A3C6E",
-        false  // false porque o HTML já é escapado e seguro
+        false
     );
 };
+
+
 /* ======================================
    📊 KPI
 ====================================== */
