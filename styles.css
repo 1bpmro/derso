@@ -325,10 +325,10 @@ input[readonly] {
 }
 
 /* ==========================================================================
-   🚨 SISTEMA DE MODAIS REFORMULADO (HINT DE INSTALAÇÃO & FAILS)
+   🚨 SISTEMA DE MODAIS REFORMULADO (CORREÇÃO DA FAIXA BRANCA)
    ========================================================================== */
 
-/* Camada Container: Funciona estritamente como a cortina de fundo */
+/* O container principal agora é APENAS a cortina escura semi-transparente */
 .modal, 
 #modalMsg {
     position: fixed !important;
@@ -336,107 +336,91 @@ input[readonly] {
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background-color: rgba(30, 41, 59, 0.65) !important; /* Cortina escura nítida */
+    background-color: rgba(30, 41, 59, 0.6) !important; /* Cortina escura fluida */
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     z-index: 9999 !important;
-    padding: 20px !important;
+    padding: 16px !important;
     box-sizing: border-box !important;
 }
 
-/* Seletor Duplo: Se o JS injetar uma DIV interna OU se injetar texto direto */
+/* 🌟 A MÁGICA AQUI: O fundo branco SÓ vai para o Card interno (div filha) 
+   ou se o modal tiver conteúdo direto, limitando o tamanho para não cobrir a tela */
 .modal > div,
-#modalMsg > div,
-.modal-content,
-#modalMsg {
-    background-color: #FFFFFF !important; /* Força fundo branco real */
-    color: #2C3E50 !important;             /* Texto escuro legível */
+.modal-content {
+    background-color: #FFFFFF !important;
+    color: #2C3E50 !important;
+    width: 100% !important;
+    max-width: 360px !important;
     border-radius: 12px !important;
     padding: 24px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3) !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 16px !important;
     text-align: center !important;
 }
 
-/* Ajustando especificidades caso o #modalMsg tenha virado o próprio card */
+/* Se o seu JavaScript injetar texto DIRETO dentro do #modalMsg (sem div filha),
+   este seletor garante que ele vire um card pequeno e centralizado no meio da tela */
 #modalMsg {
-    max-width: 380px !important;
-    margin: 0 auto !important;
-}
-.modal > div, .modal-content {
-    width: 100% !important;
-    max-width: 380px !important;
+    background-color: rgba(30, 41, 59, 0.6) !important; /* Mantém a cortina escura de fundo */
 }
 
-/* Customização dos Textos dos Modais para Contraste Extremo */
+/* Caso o JS não crie estrutura interna, criamos um comportamento de "caixa autônoma" */
+#modalMsg:not(:has(div)) {
+    padding: 40px 24px !important;
+}
+
+/* Seletor cirúrgico para formatar o bloco de texto interno sem explodir a tela */
+#modalMsg > p, 
+#modalMsg > span, 
+#modalMsg > h3 {
+    background-color: #FFFFFF !important;
+    padding: 10px 15px !important;
+    border-radius: 8px !important;
+    max-width: 360px !important;
+    margin: 0 auto !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+/* Customização dos Textos para Leitura Perfeita */
 .modal h3, #modalMsg h3, 
-.modal strong, #modalMsg strong,
-#modalMsg [style*="font-weight"] {
-    color: #1A3C6E !important; /* Títulos em Azul PMRO */
+.modal strong, #modalMsg strong {
+    color: #1A3C6E !important;
     font-size: 18px !important;
     font-weight: 700 !important;
 }
 
-.modal p, #modalMsg p, #modalMsg span {
-    color: #34495E !important; /* Corpo de texto cinza escuro nítido */
-    font-size: 14px !important;
-    line-height: 1.5 !important;
-}
-
-/* O BOTÃO FECHAR: Forçado a aceitar eventos de toque e se destacar */
+/* O BOTÃO FECHAR: Forçado a ignorar restrições e receber o clique do usuário */
 .modal button,
 #modalMsg button,
 .modal .btn,
 #modalMsg .btn {
     width: 100% !important;
+    max-width: 320px !important;
+    margin: 12px auto 0 auto !important;
     padding: 14px !important;
     font-size: 14px !important;
     font-weight: 700 !important;
-    background-color: #1A3C6E !important; /* Azul Principal */
-    color: #FFFFFF !important;             /* Letra Branca */
+    background-color: #1A3C6E !important; /* Azul PMRO */
+    color: #FFFFFF !important;
     border: none !important;
     border-radius: 8px !important;
     cursor: pointer !important;
     
-    /* Reativação do clique físico no navegador */
+    /* Ativação total do clique físico */
     position: relative !important;
-    z-index: 10005 !important;
+    z-index: 10010 !important;
     pointer-events: auto !important;
     
     text-transform: uppercase !important;
-    box-shadow: 0 4px 6px rgba(26, 60, 110, 0.2) !important;
-    margin-top: 8px !important;
+    box-shadow: 0 4px 10px rgba(26, 60, 110, 0.3) !important;
+    display: block !important;
 }
 
 .modal button:hover,
 #modalMsg button:hover {
     background-color: #122B52 !important;
-}
-
-/* ==========================================================================
-   📂 SEÇÃO DE HISTÓRICO
-   ========================================================================== */
-#historyContent {
-    margin-top: 20px !important;
-    border-top: 2px dashed #EAEDED !important;
-    padding-top: 15px !important;
-    width: 100% !important;
-}
-
-/* Utilities */
-.is-hidden {
-    display: none !important;
-}
-
-.footer {
-    margin-top: 24px;
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.5;
-    border-top: 1px solid #EAEDED;
-    padding-top: 12px;
 }
