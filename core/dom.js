@@ -1,6 +1,6 @@
 // core/dom.js
 import { CONFIG } from "./config.js";
-
+ 
 function $(id) {
     return document.getElementById(id);
 }
