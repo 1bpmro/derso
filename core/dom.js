@@ -45,7 +45,6 @@ export let DOM = {};
 // Inicialização segura que popula o objeto exportado
 function initDOM() {
     const targetElements = buildDOM();
-    
     Object.keys(targetElements).forEach(key => {
         // Atribui o elemento ou null caso não exista (evita quebra de referências)
         DOM[key] = targetElements[key] || null;
