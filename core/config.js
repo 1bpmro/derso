@@ -3,6 +3,8 @@
 // ⚠️ SECURITY: Injected via environment variables or safe defaults
 // ============================================
 
+import { VERSION_CONTROL } from "../version.js";
+
 const getEnvVar = (key, defaultValue = undefined) => {
     let value = undefined;
 
@@ -36,7 +38,7 @@ export const CONFIG = Object.freeze({
     // ============================================
     // VERSION
     // ============================================
-    VERSAO: getEnvVar('VITE_APP_VERSION', '9.5.7'),
+    VERSAO: getEnvVar('VITE_APP_VERSION', VERSION_CONTROL.SISTEMA),
     
     // ============================================
     // EMAIL CONFIGURATION
