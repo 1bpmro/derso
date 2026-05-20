@@ -1,3 +1,4 @@
+
 /* ==========================================================================
    VARIÁVEIS E CONFIGURAÇÕES GERAIS
    ========================================================================== */
@@ -459,28 +460,27 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   MODAL SYSTEM FIXED (SUPORTE COMPLETO PARA #modalMsg & .modal)
+   MODAL SYSTEM FIXED
    ========================================================================== */
-.modal, 
-#modalMsg {
-    position: fixed !important;
-    inset: 0 !important;
+.modal {
+    position: fixed;
+    inset: 0;
 
-    display: flex !important;
+    display: flex;
 
-    align-items: center !important;
-    justify-content: center !important;
+    align-items: center;
+    justify-content: center;
 
-    background: rgba(15, 23, 42, 0.82) !important;
+    background: rgba(15, 23, 42, 0.82);
 
-    backdrop-filter: blur(6px) !important;
+    backdrop-filter: blur(6px);
 
-    z-index: 9999 !important;
+    z-index: 9999;
 
-    padding: 20px !important;
+    padding: 20px;
 
-    opacity: 1 !important;
-    visibility: visible !important;
+    opacity: 1;
+    visibility: visible;
 
     transition:
         opacity 0.25s ease,
@@ -488,50 +488,33 @@ textarea:focus {
         backdrop-filter 0.25s ease;
 }
 
-/* 🔥 Garante que suma perfeitamente com interatividades liberadas por baixo */
-.modal.is-hidden, 
-#modalMsg.is-hidden {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
+/* 🔥 escondido corretamente */
+.modal.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
-/* Alvo duplo: Trata o card interno criado por .modal-content OU se o JS injetou direto no #modalMsg */
-.modal-content,
-#modalMsg > div {
-    background: var(--branco-card) !important;
+.modal-content {
+    background: var(--branco-card);
 
-    padding: 30px !important;
+    padding: 30px;
 
-    border-radius: var(--raio-padrao) !important;
+    border-radius: var(--raio-padrao);
 
-    width: 100% !important;
-    max-width: 400px !important;
+    width: 100%;
+    max-width: 400px;
 
-    text-align: center !important;
+    text-align: center;
 
-    position: relative !important;
-    overflow: hidden !important;
+    position: relative;
+    overflow: hidden;
 
     box-shadow:
         0 20px 40px rgba(0,0,0,0.3),
-        0 0 0 1px rgba(255,255,255,0.03) !important;
+        0 0 0 1px rgba(255,255,255,0.03);
 
-    animation: modalEntrada 0.25s ease-out !important;
-}
-
-/* Caso o JS insira o texto cru diretamente no #modalMsg sem criar uma div interna (Evita quebrar a tela) */
-#modalMsg:not(:has(div)) {
-    background: var(--branco-card) !important;
-    max-width: 400px !important;
-    height: auto !important;
-    inset: auto !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    border-radius: var(--raio-padrao) !important;
-    padding: 30px !important;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+    animation: modalEntrada 0.25s ease-out;
 }
 
 .modal-content::before {
@@ -570,7 +553,7 @@ textarea:focus {
     display: block;
 }
 
-#modalTitle, #modalMsg h3 {
+#modalTitle {
     font-size: 20px;
     font-weight: 900;
 
@@ -581,7 +564,7 @@ textarea:focus {
     text-transform: uppercase;
 }
 
-#modalText, #modalMsg p, #modalMsg span {
+#modalText {
     font-size: 15px;
 
     color: var(--texto-secundario);
@@ -591,34 +574,24 @@ textarea:focus {
     line-height: 1.5;
 }
 
-/* Força os botões dentro de qualquer modal a herdarem o clique e o destaque */
-.modal button, #modalMsg button {
-    pointer-events: auto !important;
-    cursor: pointer !important;
-    display: inline-flex !important;
-}
-
 /* ==========================================================================
-   HISTÓRICO (AGORA INJETADO DENTRO DO CARD DO MODAL CORRETAMENTE)
+   HISTÓRICO
    ========================================================================== */
-.historico-item, #historyContent > div {
-    background: rgba(0,0,0,0.04) !important;
+.historico-item {
+    background: rgba(0,0,0,0.03);
 
-    padding: 12px 15px !important;
+    padding: 10px;
 
-    border-radius: 8px !important;
+    border-radius: 8px;
 
-    margin-bottom: 10px !important;
+    margin-bottom: 8px;
 
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
+    display: flex;
+    justify-content: space-between;
 
-    font-size: 13px !important;
-    font-weight: 600 !important;
+    font-size: 13px;
 
-    border-left: 4px solid var(--azul-marinho) !important;
-    text-align: left !important;
+    border-left: 4px solid var(--azul-marinho);
 }
 
 /* ==========================================================================
@@ -860,25 +833,12 @@ select.admin-input {
         border-bottom: 1px solid #334155;
     }
 
-    .modal-content, #modalMsg > div {
-        background: #1e293b !important;
+    .modal-content {
+        background: #1e293b;
     }
 
-    #modalMsg:not(:has(div)) {
-        background: #1e293b !important;
-    }
-
-    #modalTitle, #modalMsg h3 {
-        color: white !important;
-    }
-    
-    #modalText, #modalMsg p, #modalMsg span {
-        color: var(--texto-secundario) !important;
-    }
-    
-    .historico-item, #historyContent > div {
-        background: rgba(255,255,255,0.05) !important;
-        color: #ffffff !important;
+    #modalTitle {
+        color: white;
     }
 }
 
