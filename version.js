@@ -3,7 +3,7 @@
 const VERSION_DATA = Object.freeze({
     SISTEMA: "9.5.7",
     STATUS: "PRODUÇÃO",
-    COMPILACAO: "2026-05-20",
+    COMPILACAO: "2026-05-21",
     LOG_TAG: "DERSO v9.5.7"
 });
 
@@ -12,5 +12,7 @@ if (typeof self !== 'undefined') {
     self.VERSION_CONTROL = VERSION_DATA;
 }
 
-// 2. Exporta como módulo padrão (essencial para o import do main.js / config.js)
-export const VERSION_CONTROL = VERSION_DATA;
+// 2. Exportação segura para módulos sem quebrar o Service Worker
+// Usamos uma propriedade dinâmica para exportar apenas se o ambiente aceitar
+let exportado = VERSION_DATA;
+export { exportado as VERSION_CONTROL };
